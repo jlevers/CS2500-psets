@@ -33,13 +33,12 @@
 
 ; A CSG (CoinShuffleGame) is a (make-csg CoinOrFalse CoinOrFalse CoinOrFalse).
 (define-struct csg [left middle right])
-; Interpretation: represents the three cups in a coin shuffle game, and what is under them.
+; Interpretation: represents the three cups in a coin shuffle game and what is under them.
 ; Examples:
 (define csg1 (make-csg cofcoin1 cofcoin2 COF-FALSE))
 (define csg2 (make-csg COF-FALSE cofcoin1 cofcoin2))
 (define csg3 (make-csg cofcoin2 COF-FALSE cofcoin1))
 (define csg4 (make-csg COF-FALSE cofcoin1 COF-FALSE))
-
 ; Template:
 #;(define (csg-temp game)
   ((... csg-left game ...)
@@ -79,9 +78,9 @@
 ; inflation : CSG Number -> CSG
 ; Interpretation: Adds value to all coins in the cup, leaving the empty coins as is.
 (define (inflation csg num)
-  ((if (number? (csg-left csg)) (+ (csg-left csg) num) #false)
-  (if (number? (csg-middle csg)) (+ (csg-middle csg) num) #false)
-  (if (number? (csg-right csg)) (+ (csg-right csg) num) #false)))
+  (make-csg (if (number? (csg-left csg)) (+ (csg-left csg) num) #false)
+            (if (number? (csg-middle csg)) (+ (csg-middle csg) num) #false)
+            (if (number? (csg-right csg)) (+ (csg-right csg) num) #false)))
 
 (check-expect (inflation csg1 3) (make-csg (+ cofcoin1 3) (+ cofcoin2 3) COF-FALSE))
 (check-expect (inflation csg2 4.2) (make-csg COF-FALSE (+ cofcoin1 4.2) (+ cofcoin2 4.2)))
