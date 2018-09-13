@@ -1,0 +1,44 @@
+;; The first three lines of this file were inserted by DrRacket. They record metadata
+;; about the language level of this file in a form that our tools can easily process.
+#reader(lib "htdp-beginner-reader.ss" "lang")((modname JECP-HW3a) (read-case-sensitive #t) (teachpacks ((lib "image.rkt" "teachpack" "2htdp") (lib "universe.rkt" "teachpack" "2htdp"))) (htdp-settings #(#t constructor repeating-decimal #f #t none #f ((lib "image.rkt" "teachpack" "2htdp") (lib "universe.rkt" "teachpack" "2htdp")) #f)))
+; A CSG (CoinShuffleGame) is a (make-csg CoinOrFalse CoinOrFalse CoinOrFalse)
+; Interpretation: represents the three cups in a coin shuffle game, and what is under them.
+; Examples:
+(define csg1 (make-csg COF-FALSE COF-FALSE cofcoin1))
+(define csg1 (make-csg COF-FALSE cofcoin2 COF-FALSE))
+
+; Template:
+(define (csg-temp game)
+  ((... csg-left game ...)
+   (... csg-middle game ...)
+   (... csg-right game ...)))
+
+(define-struct csg [left middle right])
+ 
+; A CoinOrFalse is one of:
+; - #false
+; - Number
+; Interpretation: represents either no coin or the coin's monetary value.
+; Example
+(define (COF-FALSE #false))
+(define (cofcoin1 .25))
+(define (cofcoin2 .05))
+; Template
+(define (cof-temp cof)
+  (cond [(boolean? cof) ...]
+        [(number? cof) ...]))
+ 
+; A Guess is one of:
+; - "left"
+; - "middle"
+; - "right
+; Interpretation: A player's guess in a CSG.
+; Example:
+(define (G-LEFT "left"))
+(define (G-MIDDLE "middle"))
+(define (G-RIGHT "right"))
+; Template:
+(define (guess-temp g)
+  (cond [(string=? g G-LEFT) ...]
+        [(string=? g G-MIDDLE) ...]
+        [(string=? g G-RIGHT) ...]))
