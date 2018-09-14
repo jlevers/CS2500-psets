@@ -19,7 +19,8 @@
 #;(define (cof-temp cof)
   (cond [(boolean? cof) ...]
         [(number? cof) ...]))
- 
+
+
 ; A Guess is one of:
 ; - "left"
 ; - "middle"
@@ -35,6 +36,7 @@
         [(string=? g G-MIDDLE) ...]
         [(string=? g G-RIGHT) ...]))
 
+
 ; A CSG (CoinShuffleGame) is a (make-csg CoinOrFalse CoinOrFalse CoinOrFalse).
 (define-struct csg [left middle right])
 ; Interpretation: represents the three cups in a coin shuffle game, and what is under them.
@@ -43,12 +45,12 @@
 (define csg2 (make-csg COF-FALSE cofcoin1 cofcoin2))
 (define csg3 (make-csg cofcoin2 COF-FALSE cofcoin1))
 (define csg4 (make-csg COF-FALSE cofcoin1 COF-FALSE))
-
 ; Template:
 #;(define (csg-temp game)
   ((... csg-left game ...)
    (... csg-middle game ...)
    (... csg-right game ...)))
+
 
 ; shuffle-right : CSG -> CSG
 ; Interpreation: Moves cups in a coin shuffle game to the right, looping the rightmost member back
@@ -62,6 +64,7 @@
 (check-expect (shuffle-right csg1) csg2)
 (check-expect (shuffle-right csg2) csg3)
 (check-expect (shuffle-right csg3) csg1)
+
 
 ; cup-value : CSG Guess -> Number
 ; Interpretation: Returns the value of a guessed cup in a CoinShuffleGame.
@@ -80,12 +83,14 @@
 (check-expect (cup-value csg3 "right") .05)
 (check-expect (cup-value csg3 "middle") 0)
 
+
 ; inflation : CSG Number -> CSG
-; Interpretation: Adds value to all coins in the cup, leaving the empty coins as is.
+; Interpretation: Adds value `num` to cups with coins, leaving the empty cups as is.
 (define (inflation csg num)
-  ((if (number? (csg-left csg)) (+ (csg-left csg) num) #false)
-  (if (number? (csg-middle csg)) (+ (csg-middle csg) num) #false)
-  (if (number? (csg-right csg)) (+ (csg-right csg) num) #false)))
+  (make-csg
+   (if (number? (csg-left csg)) (+ (csg-left csg) num) #false)
+   (if (number? (csg-middle csg)) (+ (csg-middle csg) num) #false)
+   (if (number? (csg-right csg)) (+ (csg-right csg) num) #false)))
 
 (check-expect (inflation csg1 3) (make-csg (+ cofcoin1 3) (+ cofcoin2 3) COF-FALSE))
 (check-expect (inflation csg2 4.2) (make-csg COF-FALSE (+ cofcoin1 4.2) (+ cofcoin2 4.2)))
@@ -108,7 +113,7 @@
 
 ;; EXERCISE 6
 
-; add-posns: Posn Posn -> Posn
+; add-posns : Posn Posn -> Posn
 ; adds the x and y values of p1 and p2 together to make a new Posn.
 (define (add-posns p1 p2)
   (make-posn (+ (posn-x p1) (posn-x p2)) (+ (posn-y p1) (posn-y p2))))
@@ -119,6 +124,18 @@
 
 
 ;; EXERCISE 7-10
+
+; An Interval is a (make-interval Number Number)
+(define-struct interval [left right])
+; and represents the leftmost and rightmost range of an interval in pixel coordinates (inclusive)
+; Examples:
+(define i1 (make-interval 1 4))
+(define i2 (make-interval 2 2))
+(define i3 (make-interval 0 12))
+; Template:
+(define (interval-temp i)
+  (... (interval-left i) ... (interval-right i) ...))
+
 
 ; A DS (Drone Shoot) is one of:
 ; - (make-launch Number Interval)
@@ -136,29 +153,66 @@
 (define ds3 (make-flight 1 (make-interval 20 200) (make-posn 1 2)))
 (define ds4 (make-flight 12 (make-interval 10 15) (make-posn 3 0)))
 ; Template
-(define (drone-shoot-temp ds)
+#;(define (drone-shoot-temp ds)
   (cond
     [(launch? ds)
-     (... (launch-photographer ds) ... (launch-goal ds) ...)]
+     (... (launch-photographer ds) ... (interval-temp (launch-goal ds)) ...)]
     [(flight? ds)
-     (... (flight-photographer ds) ... (flight-goal ds) ... (flight-drone ds) ...)]))
- 
-; An Interval is a (make-interval Number Number)
-(define-struct interval [left right])
-; and represents the leftmost and rightmost range of an interval in pixel coordinates (inclusive)
-; Examples:
-(define i1 (make-interval 1 4))
-(define i2 (make-interval 2 2))
-(define i3 (make-interval 0 12))
-; Template:
-(define (interval-temp i)
-  (... (interval-left i) ... (interval-right i) ...))
+     (... (flight-photographer ds) ... (interval-temp (flight-goal ds)) ... (flight-drone ds) ...)]))
 
-; falling-drone: DS -> DS
+
+; falling-drone : DS -> DS
 ; if there's a drone in ds, move it down by 1px.
 (define (falling-drone ds)
-  ...)
+  (if (flight? ds)
+      (make-flight
+       (flight-photographer ds)
+       (flight-goal ds)
+       (make-posn
+        (posn-x (flight-drone ds))
+        (if (> (posn-y (flight-drone ds)) 0)
+            (- (posn-y (flight-drone ds)) 1)
+            (posn-y (flight-drone ds)))))
+      ds))
 
 (check-expect (falling-drone ds1) ds1)
-(check-expect (falling-drone ds3) (make-flight 1 (make-interval 20 200) (make-posn 0 2)))
+(check-expect (falling-drone ds3) (make-flight 1 (make-interval 20 200) (make-posn 1 1)))
 (check-expect (falling-drone ds4) ds4)
+
+
+; launch-drone : DS -> DS
+; if the drone isn't flying yet, start its flight 20px up and 15px right from the photographer.
+(define (launch-drone ds)
+  (if (launch? ds)
+      (make-flight (launch-photographer ds)
+                   (launch-goal ds)
+                   (make-posn (+ (launch-photographer ds) 15) 20))
+      ds))
+
+(check-expect (launch-drone ds1) (make-flight 3 (make-interval 12 24) (make-posn 18 20)))
+(check-expect (launch-drone ds2) (make-flight 0 (make-interval 1 2) (make-posn 15 20)))
+(check-expect (launch-drone ds3) ds3)
+
+
+; shoot-over? : DS -> Boolean
+; checks if the drone has shot the whole goal (or the whole goal plus some extra), or has crashed.
+(define (shoot-over? ds)
+      (cond
+        [(launch? ds) #false]
+        [(= (posn-y (flight-drone ds)) 0) #true]
+        [(and
+          (<= (-
+               (posn-x (flight-drone ds))
+               (/ (posn-y (flight-drone ds)) 2))
+              (interval-left (flight-goal ds)))
+          (>= (+
+               (posn-x (flight-drone ds))
+               (/ (posn-y (flight-drone ds)) 2))
+              (interval-right (flight-goal ds)))) #true]
+        [else #false]))
+
+(check-expect (shoot-over? (make-flight 2 (make-interval 10 20) (make-posn 5 5))) #false)
+(check-expect (shoot-over? ds1) #false) ; drone is not in flight
+(check-expect (shoot-over? (make-flight 15 (make-interval 7 13) (make-posn 12 0))) #true)  ; drone crashed
+(check-expect (shoot-over? (make-flight 0 (make-interval 10 20) (make-posn 15 10))) #true)
+(check-expect (shoot-over? (make-flight 31 (make-interval 2 30) (make-posn 12 38))) #true) ; shooting goal plus extra
