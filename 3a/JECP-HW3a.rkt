@@ -123,7 +123,8 @@
 (check-expect (add-posns POSN-0 POSN-20) (make-posn 20 20))
 
 
-;; EXERCISE 7-10
+
+;; EXERCISES 7-10
 
 ; An Interval is a (make-interval Number Number)
 (define-struct interval [left right])
@@ -133,7 +134,7 @@
 (define i2 (make-interval 2 2))
 (define i3 (make-interval 0 12))
 ; Template:
-(define (interval-temp i)
+#;(define (interval-temp i)
   (... (interval-left i) ... (interval-right i) ...))
 
 
@@ -156,9 +157,12 @@
 #;(define (drone-shoot-temp ds)
   (cond
     [(launch? ds)
-     (... (launch-photographer ds) ... (interval-temp (launch-goal ds)) ...)]
+         (... (launch-photographer ds)
+          ... (interval-temp (launch-goal ds)) ...)]
     [(flight? ds)
-     (... (flight-photographer ds) ... (interval-temp (flight-goal ds)) ... (flight-drone ds) ...)]))
+         (... (flight-photographer ds) ...
+          ... (interval-temp (flight-goal ds)) ...
+          ... (flight-drone ds) ...)]))
 
 
 ; falling-drone : DS -> DS
@@ -189,9 +193,15 @@
                    (make-posn (+ (launch-photographer ds) 15) 20))
       ds))
 
-(check-expect (launch-drone ds1) (make-flight 3 (make-interval 12 24) (make-posn 18 20)))
-(check-expect (launch-drone ds2) (make-flight 0 (make-interval 1 2) (make-posn 15 20)))
-(check-expect (launch-drone ds3) ds3)
+(check-expect
+ (launch-drone ds1)
+ (make-flight 3 (make-interval 12 24) (make-posn 18 20)))
+(check-expect
+ (launch-drone ds2)
+ (make-flight 0 (make-interval 1 2) (make-posn 15 20)))
+(check-expect
+ (launch-drone ds3)
+ ds3)
 
 
 ; shoot-over? : DS -> Boolean
@@ -211,8 +221,18 @@
               (interval-right (flight-goal ds)))) #true]
         [else #false]))
 
-(check-expect (shoot-over? (make-flight 2 (make-interval 10 20) (make-posn 5 5))) #false)
-(check-expect (shoot-over? ds1) #false) ; drone is not in flight
-(check-expect (shoot-over? (make-flight 15 (make-interval 7 13) (make-posn 12 0))) #true)  ; drone crashed
-(check-expect (shoot-over? (make-flight 0 (make-interval 10 20) (make-posn 15 10))) #true)
-(check-expect (shoot-over? (make-flight 31 (make-interval 2 30) (make-posn 12 38))) #true) ; shooting goal plus extra
+(check-expect
+ (shoot-over? (make-flight 2 (make-interval 10 20) (make-posn 5 5)))
+ #false)
+(check-expect
+ (shoot-over? ds1)
+ #false) ; drone is not in flight
+(check-expect
+ (shoot-over? (make-flight 15 (make-interval 7 13) (make-posn 12 0)))
+ #true)  ; drone crashed
+(check-expect
+ (shoot-over? (make-flight 0 (make-interval 10 20) (make-posn 15 10)))
+ #true)
+(check-expect
+ (shoot-over? (make-flight 31 (make-interval 2 30) (make-posn 12 38)))
+ #true) ; shooting goal plus extra
