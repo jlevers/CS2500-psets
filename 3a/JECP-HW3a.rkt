@@ -17,8 +17,8 @@
 (define cofcoin2 .25)
 ; Template
 #;(define (cof-temp cof)
-  (cond [(boolean? cof) ...]
-        [(number? cof) ...]))
+    (cond [(boolean? cof) ...]
+          [(number? cof) ...]))
 
 
 ; A Guess is one of:
@@ -32,9 +32,9 @@
 (define G-RIGHT "right")
 ; Template:
 #;(define (guess-temp g)
-  (cond [(string=? g G-LEFT) ...]
-        [(string=? g G-MIDDLE) ...]
-        [(string=? g G-RIGHT) ...]))
+    (cond [(string=? g G-LEFT) ...]
+          [(string=? g G-MIDDLE) ...]
+          [(string=? g G-RIGHT) ...]))
 
 
 ; A CSG (CoinShuffleGame) is a (make-csg CoinOrFalse CoinOrFalse CoinOrFalse).
@@ -47,9 +47,9 @@
 (define csg4 (make-csg COF-FALSE cofcoin1 COF-FALSE))
 ; Template:
 #;(define (csg-temp game)
-  ((... csg-left game ...)
-   (... csg-middle game ...)
-   (... csg-right game ...)))
+    ((... csg-left game ...)
+     (... csg-middle game ...)
+     (... csg-right game ...)))
 
 
 ; shuffle-right : CSG -> CSG
@@ -57,9 +57,9 @@
 ; around to the leftmost position.
 (define (shuffle-right csg)
   (make-csg
-    (csg-right csg)
-    (csg-left csg)
-    (csg-middle csg)))
+   (csg-right csg)
+   (csg-left csg)
+   (csg-middle csg)))
 
 (check-expect (shuffle-right csg1) csg2)
 (check-expect (shuffle-right csg2) csg3)
@@ -135,7 +135,7 @@
 (define i3 (make-interval 0 12))
 ; Template:
 #;(define (interval-temp i)
-  (... (interval-left i) ... (interval-right i) ...))
+    (... (interval-left i) ... (interval-right i) ...))
 
 
 ; A DS (Drone Shoot) is one of:
@@ -155,14 +155,14 @@
 (define ds4 (make-flight 12 (make-interval 10 15) (make-posn 3 0)))
 ; Template
 #;(define (drone-shoot-temp ds)
-  (cond
-    [(launch? ds)
-         (... (launch-photographer ds)
-          ... (interval-temp (launch-goal ds)) ...)]
-    [(flight? ds)
-         (... (flight-photographer ds) ...
-          ... (interval-temp (flight-goal ds)) ...
-          ... (flight-drone ds) ...)]))
+    (cond
+      [(launch? ds)
+       (... (launch-photographer ds)
+            ... (interval-temp (launch-goal ds)) ...)]
+      [(flight? ds)
+       (... (flight-photographer ds) ...
+            ... (interval-temp (flight-goal ds)) ...
+            ... (flight-drone ds) ...)]))
 
 
 ; falling-drone : DS -> DS
@@ -207,19 +207,19 @@
 ; shoot-over? : DS -> Boolean
 ; checks if the drone has shot the whole goal (or the whole goal plus some extra), or has crashed.
 (define (shoot-over? ds)
-      (cond
-        [(launch? ds) #false]
-        [(= (posn-y (flight-drone ds)) 0) #true]
-        [(and
-          (<= (-
-               (posn-x (flight-drone ds))
-               (/ (posn-y (flight-drone ds)) 2))
-              (interval-left (flight-goal ds)))
-          (>= (+
-               (posn-x (flight-drone ds))
-               (/ (posn-y (flight-drone ds)) 2))
-              (interval-right (flight-goal ds)))) #true]
-        [else #false]))
+  (cond
+    [(launch? ds) #false]
+    [(= (posn-y (flight-drone ds)) 0) #true]
+    [(and
+      (<= (-
+           (posn-x (flight-drone ds))
+           (/ (posn-y (flight-drone ds)) 2))
+          (interval-left (flight-goal ds)))
+      (>= (+
+           (posn-x (flight-drone ds))
+           (/ (posn-y (flight-drone ds)) 2))
+          (interval-right (flight-goal ds)))) #true]
+    [else #false]))
 
 (check-expect
  (shoot-over? (make-flight 2 (make-interval 10 20) (make-posn 5 5)))
