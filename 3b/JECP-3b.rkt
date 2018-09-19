@@ -208,10 +208,10 @@
 ; main : DS -> DS
 ; Runs a drone photography game and outputs whether or not it was a success.
 (define (main ds)
-  (big-bang ds
-    [on-tick falling-drone .1]
-    [to-draw draw-ds]
-    [on-key user-input]
-    [stop-when shoot-over?])) ;Hey Jesse -- Can't figure out how to make this return a boolean.
-                              ;Also, do we have to write tests for this?
-
+  (if (= (posn-y (flight-drone
+                  (big-bang ds
+                    [on-tick falling-drone .1]
+                    [to-draw draw-ds]
+                    [on-key user-input]
+                    [stop-when shoot-over?]))) 0)
+      #false #true))
