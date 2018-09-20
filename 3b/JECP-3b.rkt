@@ -214,4 +214,5 @@
                     [to-draw draw-ds]
                     [on-key user-input]
                     [stop-when shoot-over?]))) 0)
-      #false #true))
+      #false
+      #true))
