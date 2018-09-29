@@ -1,3 +1,6 @@
+;; The first three lines of this file were inserted by DrRacket. They record metadata
+;; about the language level of this file in a form that our tools can easily process.
+#reader(lib "htdp-beginner-abbr-reader.ss" "lang")((modname 5a) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f () #f)))
 ;;;;;;;;;;;;;;;;;;
 ; Problem Set 5a ;
 ;;;;;;;;;;;;;;;;;;
@@ -9,25 +12,19 @@
 ; Exercises 2 & 3
 ; ---------------
 
-;;;;; CONSTANTS ;;;;;;
-
-(define TNTFUSE 30)
-(define MAX-DEPTH 5)
-(define NUM-RANDOM-ELEMENTS 4)  ; Wood, Water, Rock, Grass
-
+;;;;; DATA DEFINITIONS ;;;;;
 
 ; A GridPosn is a (make-posn Natural Natural)
 ; Interpretation
 ; - the first field is the player's X coordinate in grid units.
 ; - the second field is the player's Y coordinate in grid units.
-
 ; Examples
 (define gp0 (make-posn 0 0))
 (define gp1 (make-posn 15 20))
-
 ; Template
 #;(define (gridposn-temp gp)
   (... (posn-x gp) ... (posn-y gp) ...))
+
 
 ; A Direction is one of:
 ; - "UP"
@@ -35,13 +32,11 @@
 ; - "LEFT"
 ; - "RIGHT"
 ; Interpretation: A direction on screen where UP is towards the top of the screen.
-
 ; Examples
 (define DIR-UP "UP")
 (define DIR-DOWN "DOWN")
 (define DIR-LEFT "LEFT")
 (define DIR-RIGHT "RIGHT")
-
 ; Template
 #;(define (direction-temp dir)
   (cond
@@ -50,32 +45,16 @@
     [(string=? dir "LEFT") ...]
     [(string=? dir "RIGHT") ...]))
 
-(define-struct player [location direction score])
-; A Player is a (make-player GridPosn Direction Natural).
-; Interpretation
-; - the first field is the player's position on the grid.
-; - the second field is the player's front-facing direction.
-; - the third field is the player's score.
-
-; Examples
-(define player1 (make-player gp0 DIR-RIGHT 0))
-(define player2 (make-player gp1 DIR-LEFT 5))
-
-; Template
-#;(define (player-temp player)
-  (... (gridposn-temp (player-location player)) ... (direction-temp (player-direction player)) ...))
-
 
 ; A TNT is a Natural in the range [0,TNTFUSE].
 ; Interpretation: A block of TNT in the game that explodes after counting down the number.
-
 ; Examples
 (define tnt0 0)
 (define tnt1 15)
-
 ; Template
 #;(define (tnt-temp tnt)
   (... tnt ...))
+
 
 ; A Block is one of:
 ; - "Water"
@@ -85,7 +64,6 @@
 ; - "Wood"
 ; - A TNT
 ; Interpretation: A block in the game of different material types.
-
 ; Examples
 (define BLOCK-WA "Water")
 (define BLOCK-GR "Grass")
@@ -93,7 +71,6 @@
 (define BLOCK-GO "Gold")
 (define BLOCK-WO "Wood")
 (define BLOCK-TNT tnt1)
-
 ; Template
 #;(define (block-temp b)
   (cond
@@ -104,69 +81,91 @@
     [(string=? b "Gold") ...]
     [(string=? b "Wood") ...]))
 
+
+(define-struct player [location direction selected score])
+; A Player is a (make-player GridPosn Direction Block Natural).
+; Interpretation
+; - the first field is the player's position on the grid.
+; - the second field is the player's front-facing direction.
+; - the third field is the material that the player currently has selected.
+; - the fourth field is the player's score.
+; Examples
+(define player1 (make-player gp0 DIR-RIGHT "Wood" 0))
+(define player2 (make-player gp1 DIR-LEFT "Rock" 5))
+; Template
+#;(define (player-temp player)
+  (... (gridposn-temp (player-location player)) ...
+       (direction-temp (player-direction player)) ...
+       (block-temp (player-selected player)) ...
+       (player-score player) ...))
+
+
 ; A Cell is one of:
 ; - '()
 ; - (cons Block Cell)
 ; Interpretation: A cell in a grid row that contains a stack of Blocks.
-
 ; Examples
 (define cell0 '())
 (define cell1 (list BLOCK-TNT BLOCK-WA BLOCK-WO BLOCK-GO BLOCK-GR))
 (define cell2 (list BLOCK-RO BLOCK-WA))
-
 ; Template
 (define (cell-temp c)
   (cond
     [(empty? c) ...]
     [(cons? c) (... (block-temp (first c)) ... (cell-temp (rest c)) ...)]))
 
+
 ; A GridRow is one of:
 ; - '()
 ; - (cons Cell GridRow)
 ; Interpretation: A row of cells that the player plays on.
-
 ; Examples
 (define gr0 '())
 (define gr1 (make-list 20 cell1))
-
 ; Template
 #;(define (gridrow-temp gr)
   (cond
     [(empty? gr) ...]
     [(cons? gr) (... (cell-temp (first gr)) ... (gridrow-temp (rest gr)) ...)]))
 
+
 ; A Grid is one of:
 ; - '()
 ; - (cons GridRow Grid)
 ; Interpretation: A grid the player plays on.
-
 ; Examples
 (define grid0 '())
 (define grid1 (make-list 20 gr1))
-
 ; Template
 #;(define (grid-temp g)
   (cond
-    [(empty? g) ...]
+    [(empty? 0g) ...]
     [(cons? g) (... (gridrow-temp (first g)) ... (grid-temp (rest g)) ...)]))
+
 
 (define-struct world [player grid])
 ; A World is a (make-world Player Grid)
 ; Interpretation
 ; - the first field is the game player in the world.
 ; - the second field is state of the game grid that the player plays on.
-
 ; Examples
 (define world0 (make-world player1 grid0))
 (define world1 (make-world player2 grid1)) 
-
 ; Template
 #;(define (world-temp w)
   (... (player-temp (world-player w)) ... (grid-temp (world-grid w)) ...))
 
 
-; Exercise 4
-; ----------
+;;;;; CONSTANTS ;;;;;;
+
+(define TNTFUSE 30)
+(define MAX-DEPTH 5)
+(define NUM-RANDOM-ELEMENTS 4)  ; Wood, Water, Rock, Grass
+(define DEFAULT-PLAYER (make-player (make-posn 0 0) "Right" "Grass" 0))
+
+
+; Exercises 4 & 5 
+; ---------------
 
 ; main : Natural -> Natural
 ; Creates a square game board with the given side length, and returns the final score
@@ -175,49 +174,6 @@
             [on-tick update-world]
             [on-draw draw-world]
             [on-key key-handler])))
-
-; generate-world : Natural -> World
-; Produces a world based on the given side length of the grid
-(define (generate-world side)
-  (make-world (make-player (make-posn 0 0) DIR-RIGHT 0)
-              (generate-grid side)))
-
-; generate-grid : Natural -> Grid
-; Produces a random grid with the given side length
-(define (generate-grid side)
-  (cond
-    [(zero? side) '()]
-    [(positive? side) (cons (generate-grid-row side) (generate-grid (sub1 side)))]))
-
-; generate-grid-row : Natural -> GridRow
-; Produces a random grid row with the given length
-(define (generate-grid-row length)
-  (cond
-    [(zero? length) '()]
-    [(positive? length) (cons (generate-random-cell (add1 (random MAX-DEPTH)))
-                              (generate-grid-row (sub1 length)))]))
-
-; generate-random-cell : Natural -> Cell
-; Generates a random cell with the given depth
-(define (generate-random-cell depth)
-  (cond
-    [(zero? depth) '()]
-    [(positive? depth) (cons (pick-block (random NUM-RANDOM-ELEMENTS)) 
-                             (generate-random-cell (sub1 depth)))]))
-
-; pick-block : Natural -> Block
-; Chooses a block based on the number given
-(define (pick-block block-num)
-  (cond
-    [(= block-num 0) "Water"]
-    [(= block-num 1) "Grass"]
-    [(= block-num 2) "Rock"]
-    [(= block-num 3) "Wood"]))
-
-; get-score : World -> Natural
-; Gets the score from a world state
-(define (get-score world)
-  (player-score (world-player world)))
 
 ; update-world : World -> World
 ; Updates the state of the world
@@ -233,3 +189,76 @@
 ; Handles user keyboard input
 (define (key-handler w ke)
   w)
+
+; generate-world : Natural -> World
+; Produces a world based on the given side length of the grid
+(define (generate-world side)
+  (make-world DEFAULT-PLAYER (generate-grid side)))
+
+(check-satisfied (generate-world 20) world?)
+(check-satisfied (world-grid (generate-world 20)) cons?)
+(check-expect (length (world-grid (generate-world 20))) 20)
+(check-satisfied (world-player (generate-world 20)) player?)
+
+; generate-grid : Natural -> Grid
+; Produces a random grid with the given side length
+(define (generate-grid side)
+  (cond
+    [(zero? side) '()]
+    [(positive? side) (cons (generate-grid-row side) (generate-grid (sub1 side)))]))
+
+(check-expect (length (generate-grid 20)) 20)
+(check-satisfied (first (generate-grid 20)) cons?)
+(check-expect (generate-grid 0) '())
+
+; generate-grid-row : Natural -> GridRow
+; Produces a random grid row with the given length
+(define (generate-grid-row length)
+  (cond
+    [(zero? length) '()]
+    [(positive? length) (cons (generate-random-cell (add1 (random MAX-DEPTH)))
+                              (generate-grid-row (sub1 length)))]))
+
+(check-expect (length (generate-grid-row 20)) 20)
+(check-satisfied (first (generate-grid-row 20)) cons?)
+(check-expect (generate-grid-row 0) '())
+
+; generate-random-cell : Natural -> Cell
+; Generates a random cell with the given depth
+(define (generate-random-cell depth)
+  (cond
+    [(zero? depth) '()]
+    [(positive? depth) (cons (pick-block (random NUM-RANDOM-ELEMENTS)) 
+                             (generate-random-cell (sub1 depth)))]))
+
+(check-expect (length (generate-random-cell 1)) 1)
+(check-satisfied (generate-random-cell 1) cons?)
+(check-member-of (generate-random-cell 1)
+                 (list BLOCK-WA)
+                 (list BLOCK-WO)
+                 (list BLOCK-GR)
+                 (list BLOCK-RO))
+
+; pick-block : Natural -> Block
+; Chooses a block based on the number given.
+; Doesn't include Gold or TNT because Gold is placed after the grid is already generated, and
+; TNT is not naturally occurring.
+(define (pick-block block-num)
+  (cond
+    [(= block-num 0) "Water"]
+    [(= block-num 1) "Grass"]
+    [(= block-num 2) "Rock"]
+    [(= block-num 3) "Wood"]))
+
+(check-expect (pick-block 0) "Water")
+(check-expect (pick-block 1) "Grass")
+(check-expect (pick-block 2) "Rock")
+(check-expect (pick-block 3) "Wood")
+
+; get-score : World -> Natural
+; Gets the score from a world state
+(define (get-score world)
+  (player-score (world-player world)))
+
+(check-expect (get-score world0) 0)
+(check-expect (get-score world1) 5)
