@@ -23,7 +23,7 @@
 (define gp1 (make-posn 15 20))
 ; Template
 #;(define (gridposn-temp gp)
-  (... (posn-x gp) ... (posn-y gp) ...))
+    (... (posn-x gp) ... (posn-y gp) ...))
 
 
 ; A Direction is one of:
@@ -39,11 +39,11 @@
 (define DIR-RIGHT "RIGHT")
 ; Template
 #;(define (direction-temp dir)
-  (cond
-    [(string=? dir "UP") ...]
-    [(string=? dir "DOWN") ...]
-    [(string=? dir "LEFT") ...]
-    [(string=? dir "RIGHT") ...]))
+    (cond
+      [(string=? dir "UP") ...]
+      [(string=? dir "DOWN") ...]
+      [(string=? dir "LEFT") ...]
+      [(string=? dir "RIGHT") ...]))
 
 
 ; A TNT is a Natural in the range [0,TNTFUSE].
@@ -53,7 +53,7 @@
 (define tnt1 15)
 ; Template
 #;(define (tnt-temp tnt)
-  (... tnt ...))
+    (... tnt ...))
 
 
 ; A Block is one of:
@@ -73,13 +73,13 @@
 (define BLOCK-TNT tnt1)
 ; Template
 #;(define (block-temp b)
-  (cond
-    [(number? b) (tnt-temp b)]
-    [(string=? b "Water") ...]
-    [(string=? b "Grass") ...]
-    [(string=? b "Rock") ...]
-    [(string=? b "Gold") ...]
-    [(string=? b "Wood") ...]))
+    (cond
+      [(number? b) (tnt-temp b)]
+      [(string=? b "Water") ...]
+      [(string=? b "Grass") ...]
+      [(string=? b "Rock") ...]
+      [(string=? b "Gold") ...]
+      [(string=? b "Wood") ...]))
 
 
 (define-struct player [location direction selected score])
@@ -94,10 +94,10 @@
 (define player2 (make-player gp1 DIR-LEFT "Rock" 5))
 ; Template
 #;(define (player-temp player)
-  (... (gridposn-temp (player-location player)) ...
-       (direction-temp (player-direction player)) ...
-       (block-temp (player-selected player)) ...
-       (player-score player) ...))
+    (... (gridposn-temp (player-location player)) ...
+         (direction-temp (player-direction player)) ...
+         (block-temp (player-selected player)) ...
+         (player-score player) ...))
 
 
 ; A Cell is one of:
@@ -124,9 +124,9 @@
 (define gr1 (make-list 20 cell1))
 ; Template
 #;(define (gridrow-temp gr)
-  (cond
-    [(empty? gr) ...]
-    [(cons? gr) (... (cell-temp (first gr)) ... (gridrow-temp (rest gr)) ...)]))
+    (cond
+      [(empty? gr) ...]
+      [(cons? gr) (... (cell-temp (first gr)) ... (gridrow-temp (rest gr)) ...)]))
 
 
 ; A Grid is one of:
@@ -138,9 +138,9 @@
 (define grid1 (make-list 20 gr1))
 ; Template
 #;(define (grid-temp g)
-  (cond
-    [(empty? 0g) ...]
-    [(cons? g) (... (gridrow-temp (first g)) ... (grid-temp (rest g)) ...)]))
+    (cond
+      [(empty? 0g) ...]
+      [(cons? g) (... (gridrow-temp (first g)) ... (grid-temp (rest g)) ...)]))
 
 
 (define-struct world [player grid])
@@ -153,13 +153,12 @@
 (define world1 (make-world player2 grid1)) 
 ; Template
 #;(define (world-temp w)
-  (... (player-temp (world-player w)) ... (grid-temp (world-grid w)) ...))
+    (... (player-temp (world-player w)) ... (grid-temp (world-grid w)) ...))
 
 
 ;;;;; CONSTANTS ;;;;;;
 
 (define TNTFUSE 30)
-(define MAX-DEPTH 5)
 (define NUM-RANDOM-ELEMENTS 4)  ; Wood, Water, Rock, Grass
 (define DEFAULT-PLAYER (make-player (make-posn 0 0) "Right" "Grass" 0))
 
@@ -171,9 +170,9 @@
 ; Creates a square game board with the given side length, and returns the final score
 (define (main side)
   (get-score (big-bang (generate-world side)
-            [on-tick update-world]
-            [on-draw draw-world]
-            [on-key key-handler])))
+               [on-tick update-world]
+               [on-draw draw-world]
+               [on-key key-handler])))
 
 ; update-world : World -> World
 ; Updates the state of the world
@@ -216,24 +215,21 @@
 (define (generate-grid-row length)
   (cond
     [(zero? length) '()]
-    [(positive? length) (cons (generate-random-cell (add1 (random MAX-DEPTH)))
+    [(positive? length) (cons (pick-cell (random NUM-RANDOM-ELEMENTS))
                               (generate-grid-row (sub1 length)))]))
 
 (check-expect (length (generate-grid-row 20)) 20)
 (check-satisfied (first (generate-grid-row 20)) cons?)
 (check-expect (generate-grid-row 0) '())
 
-; generate-random-cell : Natural -> Cell
-; Generates a random cell with the given depth
-(define (generate-random-cell depth)
-  (cond
-    [(zero? depth) '()]
-    [(positive? depth) (cons (pick-block (random NUM-RANDOM-ELEMENTS)) 
-                             (generate-random-cell (sub1 depth)))]))
+; pick-cell : Number -> Cell
+; Generates a cell with the given block.
+(define (pick-cell n)
+  (cons (pick-block n) '()))
 
-(check-expect (length (generate-random-cell 1)) 1)
-(check-satisfied (generate-random-cell 1) cons?)
-(check-member-of (generate-random-cell 1)
+(check-expect (length (pick-cell 1)) 1)
+(check-satisfied (pick-cell 1) cons?)
+(check-member-of (pick-cell (random NUM-RANDOM-ELEMENTS))
                  (list BLOCK-WA)
                  (list BLOCK-WO)
                  (list BLOCK-GR)
