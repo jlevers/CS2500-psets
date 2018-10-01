@@ -46,7 +46,7 @@
       [(string=? dir "RIGHT") ...]))
 
 
-; A TNT is a Natural in the range [0,TNTFUSE].
+; A TNT is a Natural in the range [0,TNT-FUSE].
 ; Interpretation: A block of TNT in the game that explodes after counting down the number.
 ; Examples
 (define tnt0 0)
@@ -106,10 +106,10 @@
 ; Interpretation: A cell in a grid row that contains a stack of Blocks.
 ; Examples
 (define cell0 '())
-(define cell1 (list BLOCK-TNT BLOCK-WA BLOCK-WO BLOCK-GO BLOCK-GR))
-(define cell2 (list BLOCK-RO BLOCK-WA))
+(define initial-cell (list BLOCK-WA))
+(define user-cell (list BLOCK-RO BLOCK-WA))
 ; Template
-(define (cell-temp c)
+#;(define (cell-temp c)
   (cond
     [(empty? c) ...]
     [(cons? c) (... (block-temp (first c)) ... (cell-temp (rest c)) ...)]))
@@ -121,7 +121,7 @@
 ; Interpretation: A row of cells that the player plays on.
 ; Examples
 (define gr0 '())
-(define gr1 (make-list 20 cell1))
+(define gr1 (make-list 20 initial-cell))
 ; Template
 #;(define (gridrow-temp gr)
     (cond
@@ -132,7 +132,7 @@
 ; A Grid is one of:
 ; - '()
 ; - (cons GridRow Grid)
-; Interpretation: A grid the player plays on.
+; Interpretation: A grid the player plays on. (0,0) is at the upper left-hand corner of the grid.
 ; Examples
 (define grid0 '())
 (define grid1 (make-list 20 gr1))
@@ -158,8 +158,8 @@
 
 ;;;;; CONSTANTS ;;;;;;
 
-(define TNTFUSE 30)
-(define NUM-RANDOM-ELEMENTS 4)  ; Wood, Water, Rock, Grass
+(define TNT-FUSE 30)
+(define NUM-RANDOM-ELEMENTS 3)  ; Water, Rock, Grass
 (define DEFAULT-PLAYER (make-player (make-posn 0 0) "Right" "Grass" 0))
 
 
@@ -177,7 +177,7 @@
 ; update-world : World -> World
 ; Updates the state of the world
 (define (update-world w)
-  w)
+  world1)
 
 ; draw-world : World -> Image
 ; Draws the current state of the world
@@ -187,28 +187,29 @@
 ; key-handler : World KeyEvent -> World
 ; Handles user keyboard input
 (define (key-handler w ke)
-  w)
+  world1)
 
 ; generate-world : Natural -> World
 ; Produces a world based on the given side length of the grid
 (define (generate-world side)
-  (make-world DEFAULT-PLAYER (generate-grid side)))
+  (make-world DEFAULT-PLAYER (generate-grid side side)))
 
 (check-satisfied (generate-world 20) world?)
 (check-satisfied (world-grid (generate-world 20)) cons?)
 (check-expect (length (world-grid (generate-world 20))) 20)
 (check-satisfied (world-player (generate-world 20)) player?)
 
-; generate-grid : Natural -> Grid
-; Produces a random grid with the given side length
-(define (generate-grid side)
+; generate-grid : Natural Natural -> Grid
+; Produces a random grid with the given number of rows and columns
+(define (generate-grid rows cols)
   (cond
-    [(zero? side) '()]
-    [(positive? side) (cons (generate-grid-row side) (generate-grid (sub1 side)))]))
+    [(zero? rows) '()]
+    [(positive? rows) (cons (generate-grid-row cols) (generate-grid (sub1 rows) cols))]))
 
-(check-expect (length (generate-grid 20)) 20)
-(check-satisfied (first (generate-grid 20)) cons?)
-(check-expect (generate-grid 0) '())
+(check-expect (length (generate-grid 20 20)) 20)
+(check-satisfied (first (generate-grid 20 20)) cons?)
+(check-expect (length (first (generate-grid 20 20))) 20)
+(check-expect (generate-grid 0 0) '())
 
 ; generate-grid-row : Natural -> GridRow
 ; Produces a random grid row with the given length
@@ -220,6 +221,7 @@
 
 (check-expect (length (generate-grid-row 20)) 20)
 (check-satisfied (first (generate-grid-row 20)) cons?)
+(check-expect (length (first (generate-grid-row 20))) 1)
 (check-expect (generate-grid-row 0) '())
 
 ; pick-cell : Number -> Cell
@@ -229,11 +231,8 @@
 
 (check-expect (length (pick-cell 1)) 1)
 (check-satisfied (pick-cell 1) cons?)
-(check-member-of (pick-cell (random NUM-RANDOM-ELEMENTS))
-                 (list BLOCK-WA)
-                 (list BLOCK-WO)
-                 (list BLOCK-GR)
-                 (list BLOCK-RO))
+(check-member-of (first (pick-cell (random NUM-RANDOM-ELEMENTS)))
+                 BLOCK-WA BLOCK-GR BLOCK-RO)
 
 ; pick-block : Natural -> Block
 ; Chooses a block based on the number given.
@@ -243,13 +242,11 @@
   (cond
     [(= block-num 0) "Water"]
     [(= block-num 1) "Grass"]
-    [(= block-num 2) "Rock"]
-    [(= block-num 3) "Wood"]))
+    [(= block-num 2) "Rock"]))
 
 (check-expect (pick-block 0) "Water")
 (check-expect (pick-block 1) "Grass")
 (check-expect (pick-block 2) "Rock")
-(check-expect (pick-block 3) "Wood")
 
 ; get-score : World -> Natural
 ; Gets the score from a world state
