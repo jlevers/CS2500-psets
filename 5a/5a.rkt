@@ -110,9 +110,9 @@
 (define user-cell (list BLOCK-RO BLOCK-WA))
 ; Template
 #;(define (cell-temp c)
-  (cond
-    [(empty? c) ...]
-    [(cons? c) (... (block-temp (first c)) ... (cell-temp (rest c)) ...)]))
+    (cond
+      [(empty? c) ...]
+      [(cons? c) (... (block-temp (first c)) ... (cell-temp (rest c)) ...)]))
 
 
 ; A GridRow is one of:
