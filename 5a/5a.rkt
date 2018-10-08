@@ -156,6 +156,10 @@
     (... (player-temp (world-player w)) ... (grid-temp (world-grid w)) ...))
 
 
+; add timer to world state
+; turn grid into map
+
+
 ;;;;; CONSTANTS ;;;;;;
 
 (define TNT-FUSE 30)
