@@ -1,9 +1,9 @@
 ;; The first three lines of this file were inserted by DrRacket. They record metadata
 ;; about the language level of this file in a form that our tools can easily process.
 #reader(lib "htdp-beginner-abbr-reader.ss" "lang")((modname 5a) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f () #f)))
-;;;;;;;;;;;;;;;;;;
-; Problem Set 5a ;
-;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;
+; Problem Set 5a and 6b ;
+;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (require 2htdp/image)
 (require 2htdp/universe)
@@ -143,21 +143,18 @@
       [(cons? g) (... (gridrow-temp (first g)) ... (grid-temp (rest g)) ...)]))
 
 
-(define-struct world [player grid])
+(define-struct world [player grid clock])
 ; A World is a (make-world Player Grid)
 ; Interpretation
 ; - the first field is the game player in the world.
 ; - the second field is state of the game grid that the player plays on.
+; - the third is the clock keeping track of the number of ticks elapsed.
 ; Examples
-(define world0 (make-world player1 grid0))
-(define world1 (make-world player2 grid1)) 
+(define world0 (make-world player1 grid0 0))
+(define world1 (make-world player2 grid1 )) 
 ; Template
 #;(define (world-temp w)
     (... (player-temp (world-player w)) ... (grid-temp (world-grid w)) ...))
-
-
-; add timer to world state
-; turn grid into map
 
 
 ;;;;; CONSTANTS ;;;;;;
@@ -165,6 +162,8 @@
 (define TNT-FUSE 30)
 (define NUM-RANDOM-ELEMENTS 3)  ; Water, Rock, Grass
 (define DEFAULT-PLAYER (make-player (make-posn 0 0) "Right" "Grass" 0))
+(define TICK-RATE 1/28)
+(define GOLD-TIMER (* 5 (/ 1 TICK-RATE))) ; GOLD-TIMER is five seconds.
 
 
 ; Exercises 4 & 5 
@@ -174,7 +173,7 @@
 ; Creates a square game board with the given side length, and returns the final score
 (define (main side)
   (get-score (big-bang (generate-world side)
-               [on-tick update-world]
+               [on-tick update-world TICK-RATE]
                [on-draw draw-world]
                [on-key key-handler])))
 
