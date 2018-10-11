@@ -13,11 +13,16 @@
 ; Exercises 2 & 3
 ; ---------------
 
-;;;;; CONSTANTS THAT MUST BE PRE-DEFINED ;;;;;;;;;
+;;;;; PROGRAM CONSTANTS ;;;;;;;;;
+; These are placed here because they are used in examples.
 
-(define TICK-RATE 1/28)
-(define GOLD-TIMER (* 5 (/ 1 TICK-RATE))) ; GOLD-TIMER is five seconds.
+; Time constants.
+(define TICK-RATE 1/28) ; TICK-RATE is measured in number of seconds between clock ticks by big-bang.
+(define GOLD-TIMER (* 5 (/ 1 TICK-RATE))) ; GOLD-TIMER is five seconds relative to the TICK-RATE.
+(define TNT-FUSE 30)
+; Drawing constants.
 (define CELL-SIDE 50) ; Length (in px) of the side of a grid cell (which is square).
+
 
 ;;;;; DATA DEFINITIONS ;;;;;
 
@@ -54,16 +59,16 @@
     [(string=? dir "LEFT") ...]
     [(string=? dir "RIGHT") ...]))
 
-
-; A TNT is a Natural in the range [0,TNT-FUSE].
-; Interpretation: A block of TNT in the game that explodes after counting down the number.
+(define-struct tnt [fuse])
+; A TNT is a (make-tnt Natural).
+; Interpretation: TNT that explodes after the given natural number (fuse) counts down in seconds.
 ; Examples
-(define tnt0 0)
-(define tnt1 15)
+(define tnt0 (make-tnt 0))
+(define tnt1 (make-tnt TNT-FUSE))
 ; Template
 #;
 (define (tnt-temp tnt)
-  (... tnt ...))
+  (... (tnt-fuse tnt ...)))
 
 
 ; A Block is one of:
@@ -125,7 +130,7 @@
 #;
 (define (cell-temp c)
   (... (gridposn-temp (cell-pos c)) ...
-       (... (cell-blocks c) ...)))
+       (... (list-temp (cell-blocks c)) ...))) ; We assume list-temp is implicitly defined.
 
 
 ; A Grid is one of:
@@ -168,16 +173,29 @@
        ... (world-clock w) ...))
 
 
-;;;;; CONSTANTS ;;;;;;
-
-(define TNT-FUSE 30)
-(define NUM-RANDOM-ELEMENTS 3)  ; Water, Rock, Grass
+;;;;; OTHER PROGRAM CONSTANTS ;;;;;;
+; Some of these constants require the above data definitions.
+  
+(define NUM-RANDOM-BLOCKS 3)  ; # of random blocks that can be world generated : Water, Rock, Grass
 (define DEFAULT-PLAYER (make-player (make-posn 0 0) "Right" "Grass" 0))
+(define DEFAULT-GOLD-TIMER 0)
+; Drawing specific constants.
+; TNT
 (define TNT (square CELL-SIDE "solid" "orange"))
+(define TNT-TEXTSIZE 12)
+(define TNT-TEXTCOLOR "black")
+; Blocks
 
+; WE SHOULD USE SHRINK
 
-; Exercises 4 & 5 
-; ---------------
+(define WATER-BLOCK water-block)
+(define GRASS-BLOCK grass-block)
+(define STONE-BLOCK stone-block)
+(define GOLD-BLOCK gem-orange)
+(define WOOD-BLOCK wood-block)
+
+; Exercises 4 & 5 Reworked
+; ------------------------
 
 ; main : Natural -> Natural
 ; Creates a square game board with the given side length, and returns the final score
@@ -186,6 +204,14 @@
                [on-tick update-world TICK-RATE]
                [on-draw draw-world]
                [on-key key-handler])))
+
+; get-score : World -> Natural
+; Gets the score from a given world state.
+(define (get-score world)
+  (player-score (world-player world)))
+
+(check-expect (get-score world0) 0)
+(check-expect (get-score world1) 5)
 
 ; update-world : World -> World
 ; Updates the state of the world
@@ -200,21 +226,25 @@
 ; draw-tnt : TNT -> Image
 ; Draws a TNT block with a timer on it
 (define (draw-tnt tnt)
-  (overlay (text (number->string tnt) 12 "black") TNT))
+  (overlay (text (number->string (tnt-fuse tnt))
+                 TNT-TEXTSIZE
+                 TNT-TEXTCOLOR)
+           TNT))
 
-(check-expect (draw-tnt 12) (overlay (text "12" 12 "black") TNT))
+(check-expect (draw-tnt (make-tnt 12)) (overlay (text "12" TNT-TEXTSIZE TNT-TEXTCOLOR) TNT))
 
 ; draw-block : Block -> Image
 ; Returns the image for the given block
 (define (draw-block b)
   (cond
-    [(number? b) (draw-tnt b)]
-    [(string=? b "Water") water-block]
-    [(string=? b "Grass") grass-block]
-    [(string=? b "Rock") stone-block]
-    [(string=? b "Gold") gem-orange]
-    [(string=? b "Wood") wood-block]))
+    [(tnt? b) (draw-tnt b)]
+    [(string=? b "Water") WATER-BLOCK]
+    [(string=? b "Grass") GRASS-BLOCK]
+    [(string=? b "Rock") STONE-BLOCK]
+    [(string=? b "Gold") GOLD-BLOCK]
+    [(string=? b "Wood") WOOD-BLOCK]))
 
+(check-expect (draw-block (make-tnt 12)) (overlay (text "12" TNT-TEXTSIZE TNT-TEXTCOLOR) TNT))
 (check-expect (draw-block "Water") water-block)
 (check-expect (draw-block "Grass") grass-block)
 (check-expect (draw-block "Rock") stone-block)
@@ -239,7 +269,7 @@
 ; generate-world : Natural -> World
 ; Produces a world based on the given side length of the grid
 (define (generate-world side)
-  (make-world DEFAULT-PLAYER (generate-grid side side) 0))
+  (make-world DEFAULT-PLAYER (generate-grid side side) DEFAULT-GOLD-TIMER))
 
 (check-satisfied (generate-world 20) world?)
 (check-satisfied (world-grid (generate-world 20)) cons?)
@@ -249,54 +279,41 @@
 ; Produces a random grid with the given number of rows and columns
 (define (generate-grid rows cols)
   (local (
-          ; create-row : Natural -> Grid
-          ; Generates a grid row with the given y coordinate
-          (define (create-row y)
-            (generate-grid-row cols y)))
-  (foldr append '() (build-list rows create-row))))
-  
+          ; create-cell : Natural -> Cell
+          ; Generates a cell from a given index of all the cells in the grid.
+          (define (create-cell i)
+            (make-cell (make-posn (modulo i cols) ; x pos increases every increment. Resets at cols.
+                                  (floor (/ i rows))) ; y pos increases every 'rows'th increment.
+                       (list (pick-block (random NUM-RANDOM-BLOCKS))))))
+    (build-list (* rows cols) create-cell)))
+
+
 (check-expect (length (generate-grid 20 20)) 400)
 (check-satisfied (generate-grid 20 20) cons?)
-(check-satisfied (first (generate-grid 20 20)) cell?)
 (check-expect (generate-grid 0 0) '())
+(check-expect (generate-grid 20 0) '())
+(check-expect (generate-grid 0 20) '())
 
-; generate-grid-row : Natural Natural -> Grid
-; Produces a random grid row with the given length
-(define (generate-grid-row length y)
-  (local (
-          ; generate-cell : Natural -> Cell
-          ; Generates a cell at the given x coordinate
-          (define (generate-cell num)
-            (make-cell (make-posn num y)
-                       (list (pick-block (random NUM-RANDOM-ELEMENTS))))))
-    (build-list length generate-cell)))
-
-(check-expect (length (generate-grid-row 20 1)) 20)
-(check-satisfied (first (generate-grid-row 20 1)) cell?)
-(check-expect (length (cell-blocks (first (generate-grid-row 20 1)))) 1)
-(check-expect (generate-grid-row 0 0) '())
-(check-expect (posn-x (cell-pos (first (generate-grid-row 20 1)))) 0)
-(check-expect (posn-x (cell-pos (second (generate-grid-row 20 1)))) 1)
+(check-expect (andmap cell? (generate-grid 20 20)) true)
+(check-expect (andmap zero? (map sub1 (map length (map cell-blocks (generate-grid 20 20))))) #t)
+(check-expect (length (filter zero? (map posn-x (map cell-pos (generate-grid 20 20))))) 20)
+(check-expect (length (filter zero? (map posn-y (map cell-pos (generate-grid 20 20))))) 20)
 
 
 ; pick-block : Natural -> Block
-; Chooses a block based on the number given.
+; Chooses a random block based on the number given.
 ; Doesn't include Gold or TNT because Gold is placed after the grid is already generated, and
 ; TNT is not naturally occurring.
 (define (pick-block block-num)
   (cond
     [(= block-num 0) "Water"]
     [(= block-num 1) "Grass"]
-    [(= block-num 2) "Rock"]))
+    [(= block-num 2) "Rock"]
+    ; Currently disabled functionality.
+    [(= block-num 3) "Wood"]))
 
 (check-expect (pick-block 0) "Water")
 (check-expect (pick-block 1) "Grass")
 (check-expect (pick-block 2) "Rock")
 
-; get-score : World -> Natural
-; Gets the score from a world state
-(define (get-score world)
-  (player-score (world-player world)))
-
-(check-expect (get-score world0) 0)
-(check-expect (get-score world1) 5)
+(check-expect (pick-block 3) "Wood")
