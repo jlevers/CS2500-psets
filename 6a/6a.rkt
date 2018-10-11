@@ -268,7 +268,7 @@
 ; update-world : World -> World
 ; Updates the state of the world
 (define (update-world w)
-  world1)
+  w)
 
 ;;; DRAWING FUNCTIONS ;;;
 
@@ -484,7 +484,7 @@
 ; key-handler : World KeyEvent -> World
 ; Handles user keyboard input
 (define (key-handler w ke)
-  world1)
+  w)
 
 ;;; World Generation Functions ;;;
 
@@ -538,4 +538,4 @@
 
 (check-expect (pick-block 3) "Wood")
 
-(main 2)
+(main 20)
