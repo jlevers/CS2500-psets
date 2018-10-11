@@ -1,6 +1,6 @@
 ;; The first three lines of this file were inserted by DrRacket. They record metadata
 ;; about the language level of this file in a form that our tools can easily process.
-#reader(lib "htdp-intermediate-reader.ss" "lang")((modname 6a) (read-case-sensitive #t) (teachpacks ((lib "image.rkt" "teachpack" "2htdp"))) (htdp-settings #(#t constructor repeating-decimal #f #t none #f ((lib "image.rkt" "teachpack" "2htdp")) #f)))
+#reader(lib "htdp-intermediate-lambda-reader.ss" "lang")((modname 6a) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f () #f)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Problem Set 6b (Based on 5a) ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -30,7 +30,7 @@
 ; - the second field is the player's Y coordinate in grid units.
 ; Examples
 (define gp0 (make-posn 0 0))
-(define gp1 (make-posn 15 20))
+(define gp1 (make-posn 1 2))
 ; Template
 #;
 (define (gridposn-temp gp)
@@ -116,10 +116,10 @@
 
 
 (define-struct cell [pos blocks])
-; A Cell is a (make-cell GridPosn [NEList-of Block])
+; A Cell is a (make-cell GridPosn [List-of Block])
 ; Interpretation:
 ; - the first field is a GridPosn describing the cell's position on the grid
-; - the second field is a non-empty list of the blocks in the cell
+; - the second field is a list of the blocks in the cell
 ; Examples
 (define initial-cell (make-cell (make-posn 1 1) (list BLOCK-WA)))
 (define user-cell (make-cell (make-posn 3 2) (list BLOCK-RO BLOCK-WA)))
@@ -145,6 +145,16 @@
                     (make-cell (make-posn 2 0) (list BLOCK-WA))
                     (make-cell (make-posn 2 1) (list BLOCK-WA))
                     (make-cell (make-posn 2 2) (list BLOCK-WA))))
+(define grid2 (list (make-cell (make-posn 0 0) (list BLOCK-WA))
+                    (make-cell (make-posn 0 1) (list BLOCK-WA))
+                    (make-cell (make-posn 0 2) (list BLOCK-WA))
+                    (make-cell (make-posn 1 0) (list BLOCK-WA))
+                    (make-cell (make-posn 1 1) (list BLOCK-WA (make-tnt TNT-FUSE)))
+                    (make-cell (make-posn 1 2) (list BLOCK-WA))
+                    (make-cell (make-posn 2 0) (list BLOCK-WA))
+                    (make-cell (make-posn 2 1) (list BLOCK-WA))
+                    (make-cell (make-posn 2 2) (list BLOCK-WA))))
+
 ; Template
 #;
 (define (grid-temp g)
@@ -161,7 +171,9 @@
 ; - the third is the clock keeping track of the number of ticks elapsed.
 ; Examples
 (define world0 (make-world player1 grid0 0))
-(define world1 (make-world player2 grid1 GOLD-TIMER)) 
+(define world1 (make-world player2 grid1 GOLD-TIMER))
+(define world2 (make-world player2 grid2 0))
+
 ; Template
 #;
 (define (world-temp w)
@@ -268,18 +280,94 @@
 ; update-world : World -> World
 ; Updates the state of the world
 (define (update-world w)
-  w)
+  (make-world (world-player w)
+              (world-grid w)
+              (add1 (world-clock w))))
+
+(check-expect (update-world world0) (make-world player1 '() 1))
+
+; update-gold : Natural Grid -> Grid
+; Using value of world clock, and grid, produces new grid which has new gold if enough time passed.
+(define (update-gold t g)
+  g)
+
+; Does the gold block exist in our water world?
+(check-expect (member "Gold"
+                      (foldr (λ (cell list) (append (cell-blocks cell) list))
+                             '()
+                             (update-gold GOLD-TIMER grid1)))
+              #t)
+
+; Is the gold beneath existing materials?
+(check-expect (member "Gold"
+                      (foldr (λ (cell list)
+                               (append (rest (cell-blocks cell)) list))
+                             '()
+                             (update-gold GOLD-TIMER grid1)))
+              #t)
+
+; place-random-gold : Grid -> Grid
+; Randomly chooses a cell to place gold in, and places gold somewhere in the blocks list.
+(define (place-random-gold g)
+  g)
+
+(check-expect (place-random-gold (list (make-cell (make-posn 0 0) (list BLOCK-WA))))
+              (list (make-cell (make-posn 0 0) (list BLOCK-WA BLOCK-GO))))
+; Gold must never be placed in empty cells.
+(check-expect (place-random-gold (list (make-cell (make-posn 0 0) (list BLOCK-WA))
+                                       (make-cell (make-posn 0 0) '())))
+              (list (make-cell (make-posn 0 0) (list BLOCK-WA BLOCK-GO))
+                                       (make-cell (make-posn 0 0) '())))
+
+; random-position : Natural Natural -> GridPosn
+; Produces a random position from (0,0) to the exclusive bounds for x and y.
+(define (random-position maxx maxy)
+  (make-posn 0 0))
+
+(check-within (posn-x (random-position 10 10)) 0 9)
+(check-within (posn-y (random-position 10 10)) 0 9)
+
+; random-insert : [List-Of X] X -> [List-Of X]
+; Randomly inserts a given element into the list.
+(define (random-insert l x)
+  l)
+
+(check-expect (member (random-insert (list "X" "X" "X") "Y") "Y"))
+
+; update-tnt : Grid -> Grid
+; Finds all the tnt blocks in the grid. If tnt's fuse has run out, explode, otherwise decrease by 1.
+(define (update-tnt g)
+  g)
+
+(check-expect (update-tnt grid2) (explosion grid2 (make-posn 1 1)))
+(check-expect (update-tnt (list (make-tnt 5))) (list (make-tnt 4)))
+
+; explosion : Grid GridPosn -> Grid
+; Given an explosion occurs at some GridPosn, update the Grid to have the results of that explosion.
+(define (explosion g gp)
+  g)
+
+(check-expect (explosion grid2 (make-posn 1 1))
+              (list (make-cell (make-posn 0 0) '())
+                    (make-cell (make-posn 0 1) '())
+                    (make-cell (make-posn 0 2) '())
+                    (make-cell (make-posn 1 0) '())
+                    (make-cell (make-posn 1 1) '())
+                    (make-cell (make-posn 1 2) '())
+                    (make-cell (make-posn 2 0) '())
+                    (make-cell (make-posn 2 1) '())
+                    (make-cell (make-posn 2 2) '())))
 
 ;;; DRAWING FUNCTIONS ;;;
-
-; All of this was written for Exercise 4.
 
 ; draw-world : World -> Image
 ; Draws the current state of the world
 (define (draw-world w)
-  (beside (draw-menu (world-player w) (world-grid w))
+  (beside (draw-menu (world-player w) (world-grid w)
+                     empty-image)
           (draw-player (world-player w)
-                       (draw-grid (world-grid w) empty-image))))
+                       (draw-grid (world-grid w)
+                                  empty-image))))
 
 ; Functions related to drawing the grid are below.
 
@@ -316,7 +404,7 @@
 (define (gp->posn gp)
   (make-posn (* (posn-x gp) CELL-WIDTH) (* (posn-y gp) CELL-HEIGHT)))
 
-(check-expect (gp->posn gp1) (make-posn (* 15 CELL-WIDTH) (* 20 CELL-HEIGHT)))
+(check-expect (gp->posn gp1) (make-posn (* 1 CELL-WIDTH) (* 2 CELL-HEIGHT)))
 
 ; draw-cell : Cell Image -> Image
 ; Draws the given cell
@@ -333,12 +421,10 @@
                           (- CELL-HEIGHT)
                           (empty-scene 100 100)))
 
-; draw-grid : Grid Image -> Image
-; Draws the grid of cells onto the given image.
+; draw-grid : Grid Player Image -> Image
+; Draws the grid of cells.
 (define (draw-grid g img)
-  (foldr draw-cell
-         img
-         g))
+  (foldr draw-cell img g))
 
 (check-expect (draw-grid grid0 empty-image)
               empty-image)
@@ -363,7 +449,7 @@
 (check-expect (pick-player "RIGHT") PLAYER-RIGHT)
 
 ; draw-player : Player Image -> Image
-; draws a player ontop the given image (grid)
+; draws a player ontop the given image which must follow the grid system.
 (define (draw-player player img)
   (local (
           (define x (- (posn-x (gp->posn (player-pos player)))))
@@ -374,20 +460,21 @@
               (overlay/xy PLAYER-RIGHT 0 0 (empty-scene 100 100)))
 
 (check-expect (draw-player player2 (empty-scene 1050 1050))
-              (overlay/xy PLAYER-LEFT (* -1 15 CELL-WIDTH) (* -1 20 CELL-HEIGHT)
+              (overlay/xy PLAYER-LEFT (* -1 1 CELL-WIDTH) (* -1 2 CELL-HEIGHT)
                           (empty-scene 1050 1050)))
 
 ; Functions related to drawing the menu for the player are below.
 
-; draw-menu : Player Grid -> Image
-; draws the menu for the given player and grid info.
-(define (draw-menu p g)
-  (above (draw-menu-item "Your Score" (draw-score (player-score p)))
-         (draw-menu-item "Your Direction" (draw-direction (player-direction p)))
-         (draw-menu-item "Beneath You" (draw-materials (top-blocks (player-pos p) g)))
-         (draw-menu-item "Selected Material" (draw-block (player-selected p)))))
+; draw-menu : Player Grid Image -> Image
+; draws the menu for the given player and grid info onto the given background.
+(define (draw-menu p g img)
+  (overlay (above (draw-menu-item "Your Score" (draw-score (player-score p)))
+                  (draw-menu-item "Your Direction" (draw-direction (player-direction p)))
+                  (draw-menu-item "Beneath You" (draw-materials (top-blocks (player-pos p) g)))
+                  (draw-menu-item "Selected Material" (draw-block (player-selected p))))
+           img))
 
-(check-expect (draw-menu player1 grid1)
+(check-expect (draw-menu player1 grid1 empty-image)
               (above (draw-menu-item "Your Score" (draw-score 0))
                      (draw-menu-item "Your Direction" (draw-direction "RIGHT"))
                      (draw-menu-item "Beneath You" (draw-materials (list BLOCK-WA)))
@@ -435,7 +522,7 @@
 
 (check-expect (top-blocks gp0 grid1) (list BLOCK-WA))
 (check-expect (top-blocks gp1 (list (make-cell (make-posn 0 0) (list BLOCK-WA))
-                                    (make-cell (make-posn 15 20) (make-list 5 BLOCK-WA))))
+                                    (make-cell (make-posn 1 2) (make-list 5 BLOCK-WA))))
               (make-list STANDING-SEARCH-DEPTH BLOCK-WA))
 
 ; truncate : [List-of X] Natural -> [List-of X]
@@ -518,7 +605,6 @@
 (check-expect (andmap zero? (map sub1 (map length (map cell-blocks (generate-grid 20))))) #t)
 (check-expect (length (filter zero? (map posn-x (map cell-pos (generate-grid 20))))) 20)
 (check-expect (length (filter zero? (map posn-y (map cell-pos (generate-grid 20))))) 20)
-
 
 ; pick-block : Natural -> Block
 ; Chooses a random block based on the number given.
