@@ -1,29 +1,26 @@
 ;; The first three lines of this file were inserted by DrRacket. They record metadata
 ;; about the language level of this file in a form that our tools can easily process.
 #reader(lib "htdp-intermediate-reader.ss" "lang")((modname 6a) (read-case-sensitive #t) (teachpacks ((lib "image.rkt" "teachpack" "2htdp"))) (htdp-settings #(#t constructor repeating-decimal #f #t none #f ((lib "image.rkt" "teachpack" "2htdp")) #f)))
-;;;;;;;;;;;;;;;;;;;;;;;;;
-; Problem Set 5a and 6b ;
-;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Problem Set 6b (Based on 5a) ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; Code changes were made since 5a to make the program run cleaner.
+; Code changes completely specific to exercises 4 and 5 are marked with comments.
+
+;;;;; REQUIRED LIBRARIES ;;;;;;;;
 
 (require 2htdp/image)
 (require 2htdp/universe)
 
-
-; Exercises 2 & 3
-; ---------------
-
 ;;;;; PROGRAM CONSTANTS ;;;;;;;;;
-; These are placed here because they are used in examples.
+; These are placed here because they are used in examples for data definitions.
+; Most of the program constants are beneath the data definitions.
 
 ; Time constants.
 (define TICK-RATE 1/28) ; TICK-RATE is measured in number of seconds between clock ticks by big-bang.
 (define GOLD-TIMER (* 5 (/ 1 TICK-RATE))) ; GOLD-TIMER is five seconds relative to the TICK-RATE.
 (define TNT-FUSE 30)
-; Drawing constants.
-(define CELL-HEIGHT 50) ; Height (in px) of a grid cell
-(define CELL-WIDTH 50) ; Width (in px) of a grid cell
-
-
 
 ;;;;; DATA DEFINITIONS ;;;;;
 
@@ -176,15 +173,20 @@
 ;;;;; OTHER PROGRAM CONSTANTS ;;;;;;
 ; Some of these constants require the above data definitions.
 
+; World generation constants.
 (define NUM-RANDOM-BLOCKS 3)  ; # of random blocks that can be world generated : Water, Rock, Grass
-(define DEFAULT-PLAYER (make-player (make-posn 0 0) "Right" "Grass" 0))
+(define DEFAULT-PLAYER (make-player (make-posn 0 0) "RIGHT" "Grass" 0))
 (define DEFAULT-GOLD-TIMER 0)
+
+; Exercise 6B.4.
+
 ; Drawing specific constants.
-; TNT
-(define TNT (rectangle CELL-WIDTH CELL-HEIGHT "solid" "orange"))
-(define TNT-TEXTSIZE 12)
-(define TNT-TEXTCOLOR "black")
-; Blocks
+
+;; Blocks
+(define CELL-HEIGHT 50) ; Height (in px) of a grid cell
+(define CELL-WIDTH 50) ; Width (in px) of a grid cell
+
+; Below is a helper function for drawing blocks.
 
 ; create-block : String -> Image
 ; creates a block with a given color
@@ -197,25 +199,54 @@
 (define GOLD-BLOCK (create-block "gold"))
 (define WOOD-BLOCK (create-block "brown"))
 
-; Players
-(define PLAYER-UP (triangle CELL-WIDTH "solid" "turquoise"))
+;;; TNT
+(define TNT (rectangle CELL-WIDTH CELL-HEIGHT "solid" "orange"))
+(define TNT-TEXTSIZE (floor (/ CELL-HEIGHT 4)))
+(define TNT-TEXTCOLOR "black")
+
+
+;; Player
+(define PLAYER-POLY (list (make-posn 5 (- CELL-HEIGHT 5))
+                          (make-posn (floor (/ CELL-WIDTH 2)) 5)
+                          (make-posn (- CELL-WIDTH 5) (- CELL-HEIGHT 5))))
+
+(define PLAYER-UP (overlay (polygon PLAYER-POLY
+                                    "outline"
+                                    (make-pen "black" 3 "solid" "projecting" "miter"))
+                           (polygon PLAYER-POLY
+                                    "solid"
+                                    "white")
+                           (rectangle CELL-WIDTH CELL-HEIGHT "solid" "transparent")))
+
 (define PLAYER-LEFT (rotate 90 PLAYER-UP))
 (define PLAYER-DOWN (rotate 180 PLAYER-UP))
 (define PLAYER-RIGHT (rotate -90 PLAYER-UP))
 
-; Score
-(define SCORE-FONT-SIZE 14)
-(define SCORE-FONT-COLOR "aquamarine")
-
-;Arrows
-(define ARROW-UP (above (triangle CELL-WIDTH "solid" "yellowgreen")
-                        (rectangle (ceiling (/ CELL-WIDTH 3)) CELL-HEIGHT "solid" "yellowgreen")))
+;; Arrows
+(define ARROW-UP (above (triangle 40 "solid" "black")
+                        (rectangle 10 20 "solid" "black")))
 (define ARROW-LEFT (rotate 90 ARROW-UP))
 (define ARROW-DOWN (rotate 180 ARROW-UP))
 (define ARROW-RIGHT (rotate -90 ARROW-UP))
 
-; Exercises 4 & 5 Reworked
-; ------------------------
+
+;; Menu
+(define MENU-PAD (rectangle 1 50 "solid" "transparent")) ; Invisible vertical padding for menu item
+(define MENU-LABEL-FONT-SIZE 24) ; Font settings for labels for menu items.
+(define MENU-LABEL-FONT-COLOR "black")
+
+;;; Standing on block constants.
+(define STANDING-SEARCH-DEPTH 4) ; How deep the player can see into a cell they're standing on.
+
+;; Score
+(define SCORE-FONT-SIZE CELL-HEIGHT)
+(define SCORE-FONT-COLOR "black")
+
+; Cell Search Constants
+(define NO-CELL-ERROR "The cell with the given position does not exist.")
+(define MULT-CELL-ERROR "Multiple cells with the given position exist.")
+
+;;;;;; GAME FUNCTIONS ;;;;;;
 
 ; main : Natural -> Natural
 ; Creates a square game board with the given side length, and returns the final score
@@ -232,17 +263,25 @@
 
 (check-expect (get-score world0) 0)
 
+;;; ON-TICK FUNCTIONS ;;;
+
 ; update-world : World -> World
 ; Updates the state of the world
 (define (update-world w)
   world1)
 
+;;; DRAWING FUNCTIONS ;;;
+
+; All of this was written for Exercise 4.
+
 ; draw-world : World -> Image
 ; Draws the current state of the world
 (define (draw-world w)
-  (beside (draw-menu (world-player w) (sqrt (length (world-grid w))))
+  (beside (draw-menu (world-player w) (world-grid w))
           (draw-player (world-player w)
                        (draw-grid (world-grid w) empty-image))))
+
+; Functions related to drawing the grid are below.
 
 ; draw-tnt : TNT -> Image
 ; Draws a TNT block with a timer on it
@@ -338,22 +377,33 @@
               (overlay/xy PLAYER-LEFT (* -1 15 CELL-WIDTH) (* -1 20 CELL-HEIGHT)
                           (empty-scene 1050 1050)))
 
-; draw-menu : Player Natural -> Image
-; draws the menu for the given player with the given number of rows
-(define (draw-menu p rows)
-  (overlay (above (draw-score (player-score p))
-                  (draw-direction (player-direction p))
-                  (draw-materials (list BLOCK-WA BLOCK-WA BLOCK-WA))
-                  (draw-block (player-selected p)))
-           (draw-menu-background rows)))
+; Functions related to drawing the menu for the player are below.
 
-; draw-menu-background : Number -> Image
-; returns menu background the same height as the given number of rows
-(define (draw-menu-background rows)
-  (empty-scene (* 2 CELL-WIDTH) (* rows CELL-HEIGHT)))
+; draw-menu : Player Grid -> Image
+; draws the menu for the given player and grid info.
+(define (draw-menu p g)
+  (above (draw-menu-item "Your Score" (draw-score (player-score p)))
+         (draw-menu-item "Your Direction" (draw-direction (player-direction p)))
+         (draw-menu-item "Beneath You" (draw-materials (top-blocks (player-pos p) g)))
+         (draw-menu-item "Selected Material" (draw-block (player-selected p)))))
 
-(check-expect (draw-menu-background 0) (empty-scene (* 2 CELL-WIDTH) 0))
-(check-expect (draw-menu-background 3) (empty-scene (* 2 CELL-WIDTH) (* 3 CELL-HEIGHT)))
+(check-expect (draw-menu player1 grid1)
+              (above (draw-menu-item "Your Score" (draw-score 0))
+                     (draw-menu-item "Your Direction" (draw-direction "RIGHT"))
+                     (draw-menu-item "Beneath You" (draw-materials (list BLOCK-WA)))
+                     (draw-menu-item "Selected Material" (draw-block "Wood"))))
+
+; draw-menu-item : String Image -> Image
+; draws a menu item complete with a label and padding.
+(define (draw-menu-item name item)
+  (above MENU-PAD
+         (text name MENU-LABEL-FONT-SIZE MENU-LABEL-FONT-COLOR)
+         item))
+
+(check-expect (draw-menu-item "TEST" (circle 20 "solid" "black"))
+              (above MENU-PAD
+                     (text "TEST" MENU-LABEL-FONT-SIZE MENU-LABEL-FONT-COLOR)
+                     (circle 20 "solid" "black")))
 
 ; draw-score : Number -> Image
 ; draws the given score
@@ -376,22 +426,67 @@
 (check-expect (draw-direction "LEFT") ARROW-LEFT)
 (check-expect (draw-direction "RIGHT") ARROW-RIGHT)
 
-; draw-materials : [List-of Blocks] -> Image
+;; All the functions below are used to provide the functionality of revealing what's underground.
+
+; top-blocks : GridPosn Grid -> [List-of Block]
+; Using the given position on the grid, finds all the blocks in the cell to a certain depth.
+(define (top-blocks gp g)
+  (truncate (cell-blocks (search-cell gp g)) STANDING-SEARCH-DEPTH))
+
+(check-expect (top-blocks gp0 grid1) (list BLOCK-WA))
+(check-expect (top-blocks gp1 (list (make-cell (make-posn 0 0) (list BLOCK-WA))
+                                    (make-cell (make-posn 15 20) (make-list 5 BLOCK-WA))))
+              (make-list STANDING-SEARCH-DEPTH BLOCK-WA))
+
+; truncate : [List-of X] Natural -> [List-of X]
+; returns a list truncated to have a given max length.
+(define (truncate l depth)
+  (cond [(or (zero? depth) (empty? l)) '()]
+        [(positive? depth) (cons (first l) (truncate (rest l) (sub1 depth)))]))
+
+(check-expect (truncate (make-list 10 "TEST") 2) (list "TEST" "TEST"))
+(check-expect (truncate (make-list 3 "TEST") 4) (list "TEST" "TEST" "TEST"))
+(check-expect (truncate '() 4) '())
+
+; search-cell : GridPosn Grid -> Cell
+; Using the given position, finds a matching cell in the grid.
+(define (search-cell gp g)
+  (local (; matching-cell? : Cell -> Boolean
+          ; returns true if the cell has a matching position.
+          (define (matching-cell? cell)
+            (and (= (posn-x (cell-pos cell)) (posn-x gp))
+                 (= (posn-y (cell-pos cell)) (posn-y gp))))
+          
+          (define filtered-cells (filter matching-cell? g)))
+    (cond [(= (length filtered-cells) 0) (error NO-CELL-ERROR)]
+          [(= (length filtered-cells) 1) (first filtered-cells)]
+          [else (error MULT-CELL-ERROR)])))
+
+(check-error (search-cell gp0 grid0) NO-CELL-ERROR)
+(check-error (search-cell gp0 (make-list 2 (make-cell (make-posn 0 0) BLOCK-WA))) MULT-CELL-ERROR)
+(check-expect (search-cell gp0 grid1) (first grid1)) ; The first cell is the head of the grid list.
+
+; draw-materials : [List-of Block] -> Image
 ; Draws a list of blocks in a stack.
 (define (draw-materials lob)
-  (local (; scale-down : Image -> Image
-          ; scales down a given image by 1/2
-          (define (scale-down img)
-            (scale 1/2 img)))
-    (foldr above empty-image (map scale-down (map draw-block lob)))))
+  (local (; draw-below : Block Image -> Image
+          ; draws the image of the block below the given image
+          (define (draw-below block img)
+            (above img
+                   (draw-block block))))
+    (foldr draw-below empty-image lob)))
 
 (check-expect (draw-materials (make-list 4 BLOCK-WA))
-              (foldr above empty-image (make-list 4 (scale 1/2 WATER-BLOCK))))
+              (foldr above empty-image (make-list 4 WATER-BLOCK)))
+
+;;; Key Handler Functions ;;;
 
 ; key-handler : World KeyEvent -> World
 ; Handles user keyboard input
 (define (key-handler w ke)
   world1)
+
+;;; World Generation Functions ;;;
 
 ; generate-world : Natural -> World
 ; Produces a world based on the given side length of the grid
@@ -442,3 +537,5 @@
 (check-expect (pick-block 2) "Rock")
 
 (check-expect (pick-block 3) "Wood")
+
+(main 2)
