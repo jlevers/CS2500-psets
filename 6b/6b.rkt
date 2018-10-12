@@ -149,7 +149,16 @@
                     (make-cell (make-posn 0 1) (list BLOCK-WA))
                     (make-cell (make-posn 0 2) (list BLOCK-WA))
                     (make-cell (make-posn 1 0) (list BLOCK-WA))
-                    (make-cell (make-posn 1 1) (list BLOCK-WA (make-tnt TNT-FUSE)))
+                    (make-cell (make-posn 1 1) (list BLOCK-WA (make-tnt 0)))
+                    (make-cell (make-posn 1 2) (list BLOCK-WA))
+                    (make-cell (make-posn 2 0) (list BLOCK-WA))
+                    (make-cell (make-posn 2 1) (list BLOCK-WA))
+                    (make-cell (make-posn 2 2) (list BLOCK-WA))))
+(define grid3 (list (make-cell (make-posn 0 0) (list BLOCK-WA))
+                    (make-cell (make-posn 0 1) (list BLOCK-WA))
+                    (make-cell (make-posn 0 2) (list BLOCK-WA))
+                    (make-cell (make-posn 1 0) (list BLOCK-WA))
+                    (make-cell (make-posn 1 1) (list BLOCK-WA (make-tnt 5)))
                     (make-cell (make-posn 1 2) (list BLOCK-WA))
                     (make-cell (make-posn 2 0) (list BLOCK-WA))
                     (make-cell (make-posn 2 1) (list BLOCK-WA))
@@ -172,7 +181,7 @@
 ; Examples
 (define world0 (make-world player1 grid0 0))
 (define world1 (make-world player2 grid1 GOLD-TIMER))
-(define world2 (make-world player2 grid2 0))
+(define world2 (make-world player2 grid2 1))
 
 ; Template
 #;
@@ -192,7 +201,7 @@
 
 ; Exercise 6B.4.
 
-; Drawing specific constants.
+; Drawing specific constants. Exercise 4
 
 ;; Blocks
 (define CELL-HEIGHT 50) ; Height (in px) of a grid cell
@@ -254,10 +263,6 @@
 (define SCORE-FONT-SIZE CELL-HEIGHT)
 (define SCORE-FONT-COLOR "black")
 
-; Cell Search Constants
-(define NO-CELL-ERROR "The cell with the given position does not exist.")
-(define MULT-CELL-ERROR "Multiple cells with the given position exist.")
-
 ;;;;;; GAME FUNCTIONS ;;;;;;
 
 ; main : Natural -> Natural
@@ -281,15 +286,20 @@
 ; Updates the state of the world
 (define (update-world w)
   (make-world (world-player w)
-              (world-grid w)
+              (update-gold (world-clock w) (decrement-fuse (update-tnt (world-grid w))))
               (add1 (world-clock w))))
 
-(check-expect (update-world world0) (make-world player1 '() 1))
+(check-expect (update-world (make-world player1 grid1 5)) (make-world player1 grid1 6))
+
 
 ; update-gold : Natural Grid -> Grid
 ; Using value of world clock, and grid, produces new grid which has new gold if enough time passed.
 (define (update-gold t g)
-  g)
+  (if (= (modulo t GOLD-TIMER) 0)
+      (place-random-gold g)
+      g))
+
+(check-expect (update-gold 1 grid2) grid2)
 
 ; Does the gold block exist in our water world?
 (check-expect (member "Gold"
@@ -309,43 +319,155 @@
 ; place-random-gold : Grid -> Grid
 ; Randomly chooses a cell to place gold in, and places gold somewhere in the blocks list.
 (define (place-random-gold g)
-  g)
+  (local (
+          (define possible-positions (map cell-pos (filter (λ (cell) (cons? (cell-blocks cell))) g)))
+          (define cell-position (pick-random-element possible-positions))
+          (define (add-gold cell)
+            (if (posn=? cell-position (cell-pos cell))
+                (make-cell (cell-pos cell) (insert-below (cell-blocks cell) BLOCK-GO))
+                cell)))
+    (map add-gold g)))
 
 (check-expect (place-random-gold (list (make-cell (make-posn 0 0) (list BLOCK-WA))))
               (list (make-cell (make-posn 0 0) (list BLOCK-WA BLOCK-GO))))
 ; Gold must never be placed in empty cells.
 (check-expect (place-random-gold (list (make-cell (make-posn 0 0) (list BLOCK-WA))
-                                       (make-cell (make-posn 0 0) '())))
+                                       (make-cell (make-posn 0 1) '())))
               (list (make-cell (make-posn 0 0) (list BLOCK-WA BLOCK-GO))
-                                       (make-cell (make-posn 0 0) '())))
+                    (make-cell (make-posn 0 1) '())))
 
-; random-position : Natural Natural -> GridPosn
-; Produces a random position from (0,0) to the exclusive bounds for x and y.
-(define (random-position maxx maxy)
-  (make-posn 0 0))
+; pick-random-element : [List-of X] -> X
+; Picks a random element from the given list
+(define (pick-random-element l)
+  (list-ith l (random (length l))))
 
-(check-within (posn-x (random-position 10 10)) 0 9)
-(check-within (posn-y (random-position 10 10)) 0 9)
+(check-expect (member (pick-random-element (list 1 2 3 4)) (list 1 2 3 4)) #t)
 
-; random-insert : [List-Of X] X -> [List-Of X]
+; list-ith : [List-of X] Natural -> X
+(define (list-ith l num)
+  (cond
+    [(zero? num) (first l)]
+    [else (list-ith (rest l) (sub1 num))]))
+
+(check-expect (list-ith (list 1 2) 1) 2)
+
+; insert-below : [List-Of X] X -> [List-Of X]
 ; Randomly inserts a given element into the list.
-(define (random-insert l x)
-  l)
+(define (insert-below l x)
+  (cond
+    [(empty? l) (list x)]
+    [(cons? l) (cons (first l) (cons x (rest l)))]))
 
-(check-expect (member (random-insert (list "X" "X" "X") "Y") "Y"))
+(check-expect (insert-below (list "X" "X" "X") "Y") (list "X" "Y" "X" "X"))
+(check-expect (insert-below '() "Y") (list "Y"))
+
+; decrement-fuse : Grid -> Grid
+; Finds all tnt blocks in the grid and decrements the fuses.
+(define (decrement-fuse g)
+  (local (; decrement-block : Block -> Block
+          ; If the given block is a tnt, decrements the fuse.
+          (define (decrement-block b)
+            (if (tnt? b)
+                (make-tnt (sub1 (tnt-fuse b)))
+                b))
+          ; decrement-cell : Cell -> Cell
+          (define (decrement-cell cell)
+            (make-cell (cell-pos cell) (map decrement-block (cell-blocks cell)))))
+    (map decrement-cell g)))
+
+(check-expect (decrement-fuse grid3)
+              (list (make-cell (make-posn 0 0) (list BLOCK-WA))
+                    (make-cell (make-posn 0 1) (list BLOCK-WA))
+                    (make-cell (make-posn 0 2) (list BLOCK-WA))
+                    (make-cell (make-posn 1 0) (list BLOCK-WA))
+                    (make-cell (make-posn 1 1) (list BLOCK-WA (make-tnt 4)))
+                    (make-cell (make-posn 1 2) (list BLOCK-WA))
+                    (make-cell (make-posn 2 0) (list BLOCK-WA))
+                    (make-cell (make-posn 2 1) (list BLOCK-WA))
+                    (make-cell (make-posn 2 2) (list BLOCK-WA))))
 
 ; update-tnt : Grid -> Grid
-; Finds all the tnt blocks in the grid. If tnt's fuse has run out, explode, otherwise decrease by 1.
+; Finds all the tnt blocks in the grid. If tnt's fuse has run out, explode.
 (define (update-tnt g)
-  g)
+  (local (; contains-primed-tnt? : Cell -> Boolean
+          ; Returns true if the cell's blocks contains a primed tnt.
+          (define (contains-primed-tnt? cell)
+            (ormap primed-tnt? (cell-blocks cell)))
+          ; explode-cell : Cell Grid -> Grid
+          ; Causes an explosion in the grid from the given cell.
+          (define (explode-cell cell g)
+            (if (contains-primed-tnt? cell)
+                (explosion g (cell-pos cell))
+                g)))
+    (foldr explode-cell g g)))
 
 (check-expect (update-tnt grid2) (explosion grid2 (make-posn 1 1)))
-(check-expect (update-tnt (list (make-tnt 5))) (list (make-tnt 4)))
+(check-expect (update-tnt grid3) grid3)
+
+; primed-tnt? : Block -> Boolean
+; Returns true if it is a TNT at timer = 0, false otherwise
+(define (primed-tnt? b)
+  (and (tnt? b) (= (tnt-fuse b) 0)))
+
+(check-expect (primed-tnt? (make-tnt 0)) #t)
+(check-expect (primed-tnt? (make-tnt 4)) #f)
+(check-expect (primed-tnt? BLOCK-WA) #f)
+
+; From problem set 3a and 4b
+; add-posns : Posn Posn -> Posn
+; adds the x and y values of p1 and p2 together to make a new Posn.
+(define (add-posns p1 p2)
+  (make-posn (+ (posn-x p1) (posn-x p2)) (+ (posn-y p1) (posn-y p2))))
+
+(check-expect (add-posns (make-posn 20 20) (make-posn 21 21)) (make-posn 41 41))
+
+; neighbor-to-tnt : GridPosn GridPosn -> Boolean
+; Determines if the first given gridposn is a neighbor to a second gridposn.
+(define (neighbor-to-tnt gp1 gp2)
+  (and (>= (posn-x gp1) (sub1 (posn-x gp2))) (<= (posn-x gp1) (add1 (posn-x gp2)))
+       (>= (posn-y gp1) (sub1 (posn-y gp2))) (<= (posn-y gp1) (add1 (posn-y gp2)))))
+
+(check-expect (neighbor-to-tnt (make-posn 0 0) (make-posn -1 -1)) #t)
+(check-expect (neighbor-to-tnt (make-posn 0 0) (make-posn -1 0)) #t)
+(check-expect (neighbor-to-tnt (make-posn 0 0) (make-posn -1 1)) #t)
+(check-expect (neighbor-to-tnt (make-posn 0 0) (make-posn 0 -1)) #t)
+
+(check-expect (neighbor-to-tnt (make-posn 0 0) (make-posn 0 2)) #f)
+
+(check-expect (neighbor-to-tnt (make-posn 0 0) (make-posn 0 1)) #t)
+(check-expect (neighbor-to-tnt (make-posn 0 0) (make-posn 1 -1)) #t)
+(check-expect (neighbor-to-tnt (make-posn 0 0) (make-posn 1 0)) #t)
+(check-expect (neighbor-to-tnt (make-posn 0 0) (make-posn 1 1)) #t)
+
+; update-block-for-tnt : Cell GridPosn -> Cell
+; Removes blocks in the cell unless there's a primed tnt, OR it's not a neighbor to the given posn.
+(define (update-block-for-tnt cell gp)
+  (cond
+    [(posn=? (cell-pos cell) gp) (make-cell (cell-pos cell) '())]
+    [(neighbor-to-tnt (cell-pos cell) gp)
+     (make-cell (cell-pos cell) (filter primed-tnt? (cell-blocks cell)))]
+    [else cell]))
+
+(check-expect (update-block-for-tnt (make-cell gp0 (list BLOCK-WA)) (make-posn 1 0))
+              (make-cell gp0 '()))
+(check-expect (update-block-for-tnt (make-cell gp0 (list BLOCK-WA (make-tnt 0))) (make-posn 1 0))
+              (make-cell gp0 (list (make-tnt 0))))
+(check-expect (update-block-for-tnt (make-cell gp0 (list BLOCK-WA)) (make-posn 99 99))
+              (make-cell gp0 (list BLOCK-WA)))
+
+; posn=? : Posn Posn -> Boolean
+; Checks if two posns are equal
+(define (posn=? p1 p2)
+  (and (= (posn-x p1) (posn-x p2))
+       (= (posn-y p1) (posn-y p2))))
+
+(check-expect (posn=? (make-posn 0 0) (make-posn 0 0)) #t)
+(check-expect (posn=? (make-posn 1 0) (make-posn 0 0)) #f)
 
 ; explosion : Grid GridPosn -> Grid
 ; Given an explosion occurs at some GridPosn, update the Grid to have the results of that explosion.
 (define (explosion g gp)
-  g)
+  (map (λ (cell) (update-block-for-tnt cell gp)) g))
 
 (check-expect (explosion grid2 (make-posn 1 1))
               (list (make-cell (make-posn 0 0) '())
@@ -358,7 +480,7 @@
                     (make-cell (make-posn 2 1) '())
                     (make-cell (make-posn 2 2) '())))
 
-;;; DRAWING FUNCTIONS ;;;
+;;; DRAWING FUNCTIONS Exercise 4 ;;;
 
 ; draw-world : World -> Image
 ; Draws the current state of the world
@@ -518,7 +640,7 @@
 ; top-blocks : GridPosn Grid -> [List-of Block]
 ; Using the given position on the grid, finds all the blocks in the cell to a certain depth.
 (define (top-blocks gp g)
-  (truncate (cell-blocks (search-cell gp g)) STANDING-SEARCH-DEPTH))
+  (truncate (cell-blocks (search-for-cell gp g)) STANDING-SEARCH-DEPTH))
 
 (check-expect (top-blocks gp0 grid1) (list BLOCK-WA))
 (check-expect (top-blocks gp1 (list (make-cell (make-posn 0 0) (list BLOCK-WA))
@@ -535,23 +657,18 @@
 (check-expect (truncate (make-list 3 "TEST") 4) (list "TEST" "TEST" "TEST"))
 (check-expect (truncate '() 4) '())
 
-; search-cell : GridPosn Grid -> Cell
+; search-for-cell : GridPosn Grid -> Cell
 ; Using the given position, finds a matching cell in the grid.
-(define (search-cell gp g)
+(define (search-for-cell gp g)
   (local (; matching-cell? : Cell -> Boolean
           ; returns true if the cell has a matching position.
           (define (matching-cell? cell)
             (and (= (posn-x (cell-pos cell)) (posn-x gp))
-                 (= (posn-y (cell-pos cell)) (posn-y gp))))
-          
-          (define filtered-cells (filter matching-cell? g)))
-    (cond [(= (length filtered-cells) 0) (error NO-CELL-ERROR)]
-          [(= (length filtered-cells) 1) (first filtered-cells)]
-          [else (error MULT-CELL-ERROR)])))
+                 (= (posn-y (cell-pos cell)) (posn-y gp)))))
+    (first (filter matching-cell? g))))
 
-(check-error (search-cell gp0 grid0) NO-CELL-ERROR)
-(check-error (search-cell gp0 (make-list 2 (make-cell (make-posn 0 0) BLOCK-WA))) MULT-CELL-ERROR)
-(check-expect (search-cell gp0 grid1) (first grid1)) ; The first cell is the head of the grid list.
+; The first cell is the head of the grid list.
+(check-expect (search-for-cell gp0 grid1) (first grid1))
 
 ; draw-materials : [List-of Block] -> Image
 ; Draws a list of blocks in a stack.
@@ -624,4 +741,4 @@
 
 (check-expect (pick-block 3) "Wood")
 
-(main 20)
+;(main 20)
