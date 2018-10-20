@@ -1,6 +1,6 @@
 ;; The first three lines of this file were inserted by DrRacket. They record metadata
 ;; about the language level of this file in a form that our tools can easily process.
-#reader(lib "htdp-intermediate-lambda-reader.ss" "lang")((modname 6b) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f () #f)))
+#reader(lib "htdp-intermediate-lambda-reader.ss" "lang")((modname 8a) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f () #f)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Problem Set 6b (Based on 5a) ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -325,6 +325,7 @@
   (local (
           (define possible-positions (map cell-pos (filter (λ (cell) (cons? (cell-blocks cell))) g)))
           (define cell-position (pick-random-element possible-positions))
+          ; 
           (define (add-gold cell)
             (if (posn=? cell-position (cell-pos cell))
                 (make-cell (cell-pos cell) (insert-below (cell-blocks cell) BLOCK-GO))
