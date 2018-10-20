@@ -20,7 +20,7 @@
 ; Time constants.
 (define TICK-RATE 1/28) ; TICK-RATE is measured in number of seconds between clock ticks by big-bang.
 (define GOLD-TIMER (* 5 (/ 1 TICK-RATE))) ; GOLD-TIMER is five seconds relative to the TICK-RATE.
-(define TNT-FUSE 30)
+(define TNT-FUSE (* 10 (/ 1 TICK-RATE)))
 
 ;;;;; DATA DEFINITIONS ;;;;;
 
@@ -88,7 +88,7 @@
 #;
 (define (block-temp b)
   (cond
-    [(number? b) (tnt-temp b)]
+    [(tnt? b) (tnt-temp b)]
     [(string=? b "Water") ...]
     [(string=? b "Grass") ...]
     [(string=? b "Rock") ...]
@@ -121,6 +121,7 @@
 ; - the first field is a GridPosn describing the cell's position on the grid
 ; - the second field is a list of the blocks in the cell
 ; Examples
+(define empty-cell (make-cell (make-posn 1 1) '()))
 (define initial-cell (make-cell (make-posn 1 1) (list BLOCK-WA)))
 (define user-cell (make-cell (make-posn 3 2) (list BLOCK-RO BLOCK-WA)))
 ; Template
@@ -222,6 +223,7 @@
 (define STONE-BLOCK (create-block "gray"))
 (define GOLD-BLOCK (create-block "gold"))
 (define WOOD-BLOCK (create-block "brown"))
+(define EMPTY-BLOCK (create-block "white"))
 
 ;;; TNT
 (define TNT (rectangle CELL-WIDTH CELL-HEIGHT "solid" "orange"))
@@ -306,31 +308,34 @@
 
 ; Does the gold block exist in our water world?
 (check-expect (member "Gold"
-                      (foldr (λ (cell list) (append (cell-blocks cell) list))
-                             '()
-                             (update-gold GOLD-TIMER grid1)))
+                      (apply append
+                             (map cell-blocks
+                                  (update-gold GOLD-TIMER grid1))))
               #t)
 
 ; Is the gold beneath existing materials?
-(check-expect (member "Gold"
-                      (foldr (λ (cell list)
-                               (append (rest (cell-blocks cell)) list))
-                             '()
-                             (update-gold GOLD-TIMER grid1)))
-              #t)
+(check-expect (not (member "Gold"
+                           (map (compose first cell-blocks)
+                                (update-gold GOLD-TIMER grid1)))) #t)
 
 ; place-random-gold : Grid -> Grid
 ; Randomly chooses a cell to place gold in, and places gold somewhere in the blocks list.
 (define (place-random-gold g)
   (local (
           (define possible-positions (map cell-pos (filter (λ (cell) (cons? (cell-blocks cell))) g)))
-          (define cell-position (pick-random-element possible-positions))
-          ; 
-          (define (add-gold cell)
+          ; add-gold : Cell -> Cell
+          ; Adds gold below the top item in the cell
+          (define (add-gold cell cell-position)
             (if (posn=? cell-position (cell-pos cell))
-                (make-cell (cell-pos cell) (insert-below (cell-blocks cell) BLOCK-GO))
+                (add-gold-to-cell cell)
                 cell)))
-    (map add-gold g)))
+    (cond
+      [(empty? possible-positions) g]
+      [(cons? possible-positions)
+       (local ((define selected-position (pick-random-element possible-positions)))
+       (map (λ (c) (add-gold c selected-position)) g))])))
+
+; 
 
 (check-expect (place-random-gold (list (make-cell (make-posn 0 0) (list BLOCK-WA))))
               (list (make-cell (make-posn 0 0) (list BLOCK-WA BLOCK-GO))))
@@ -340,6 +345,16 @@
               (list (make-cell (make-posn 0 0) (list BLOCK-WA BLOCK-GO))
                     (make-cell (make-posn 0 1) '())))
 
+; add-gold-to-cell : Cell -> Cell
+; Adds gold to cell
+(define (add-gold-to-cell cell)
+  (make-cell (cell-pos cell)
+             (cons (first (cell-blocks cell))
+                   (insert-at-random (rest (cell-blocks cell))
+                                     BLOCK-GO))))
+
+(check-expect (member "Gold" (rest (cell-blocks (add-gold-to-cell user-cell)))) #t)
+
 ; pick-random-element : [List-of X] -> X
 ; Picks a random element from the given list
 (define (pick-random-element l)
@@ -348,6 +363,7 @@
 (check-expect (member (pick-random-element (list 1 2 3 4)) (list 1 2 3 4)) #t)
 
 ; list-ith : [List-of X] Natural -> X
+; Gets the element at position num of l
 (define (list-ith l num)
   (cond
     [(zero? num) (first l)]
@@ -355,15 +371,21 @@
 
 (check-expect (list-ith (list 1 2) 1) 2)
 
-; insert-below : [List-Of X] X -> [List-Of X]
+; insert-at-random : [List-Of X] X -> [List-Of X]
 ; Randomly inserts a given element into the list.
-(define (insert-below l x)
+(define (insert-at-random l x)
   (cond
     [(empty? l) (list x)]
-    [(cons? l) (cons (first l) (cons x (rest l)))]))
+    [(cons? l) (insert-depth l (random (length l)) x)]))
 
-(check-expect (insert-below (list "X" "X" "X") "Y") (list "X" "Y" "X" "X"))
-(check-expect (insert-below '() "Y") (list "Y"))
+; insert-depth : [List-Of X] Natural X -> [List-of X]
+; inserts at the given depth.
+(define (insert-depth l d x)
+  (cond [(zero? d) (cons x l)]
+        [(positive? d) (cons (first l) (insert-depth (rest l) (sub1 d) x))]))
+
+(check-expect (insert-depth (list "X" "X" "X") 2 "Y") (list "X" "X" "Y" "X"))
+(check-expect (insert-depth '() 0 "Y") (list "Y"))
 
 ; decrement-fuse : Grid -> Grid
 ; Finds all tnt blocks in the grid and decrements the fuses.
@@ -375,6 +397,7 @@
                 (make-tnt (sub1 (tnt-fuse b)))
                 b))
           ; decrement-cell : Cell -> Cell
+          ; Decrement all TNTs in the given cell
           (define (decrement-cell cell)
             (make-cell (cell-pos cell) (map decrement-block (cell-blocks cell)))))
     (map decrement-cell g)))
@@ -535,17 +558,30 @@
 ; draw-cell : Cell Image -> Image
 ; Draws the given cell
 (define (draw-cell cell img)
-  (local (
+  (local [
           (define x (- (posn-x (gp->posn (cell-pos cell)))))
-          (define y (- (posn-y (gp->posn (cell-pos cell)))))
-          (define block (first (cell-blocks cell))))
-    (overlay/xy (draw-block block) x y img)))
+          (define y (- (posn-y (gp->posn (cell-pos cell)))))]
+    (overlay/xy (draw-top-block (cell-blocks cell)) x y img)))
 
 (check-expect (draw-cell initial-cell (empty-scene 100 100))
               (overlay/xy (draw-block "Water")
                           (- CELL-WIDTH)
                           (- CELL-HEIGHT)
                           (empty-scene 100 100)))
+(check-expect (draw-cell empty-cell (empty-scene 100 100))
+              (overlay/xy EMPTY-BLOCK
+                          (- CELL-WIDTH)
+                          (- CELL-HEIGHT)
+                          (empty-scene 100 100)))
+
+; draw-top-block : [List-of Block] -> Image
+; Decides whether to draw an empty block or an actual block
+(define (draw-top-block lob)
+  (cond [(empty? lob) EMPTY-BLOCK]
+        [(cons? lob) (draw-block (first lob))]))
+
+(check-expect (draw-top-block '()) EMPTY-BLOCK)
+(check-expect (draw-top-block (list BLOCK-WA BLOCK-RO)) WATER-BLOCK)
 
 ; draw-grid : Grid Player Image -> Image
 ; Draws the grid of cells.
@@ -693,6 +729,60 @@
 ; Handles user keyboard input
 (define (key-handler w ke)
   w)
+
+; move-player : Player Direction Natural -> Player
+; Moves the player based on user input
+(define (move-player p dir side)
+  (local [(define new-pos (new-player-pos (player-pos p) dir))]
+  (if (valid-gridposn? new-pos side)
+      (make-player new-pos dir (player-selected p) (player-score p))
+      (make-player (player-pos p) dir (player-selected p) (player-score p)))))
+
+(check-expect (move-player player1 "UP" 3) (make-player (make-posn 0 0) "UP" "Wood" 0))
+(check-expect (move-player player1 "RIGHT" 3) (make-player (make-posn 1 0) "RIGHT" "Wood" 0))
+
+; new-player-pos : GridPosn Direction -> GridPosn
+; Changes grid position to move 1 in given direction, if still on grid
+(define (new-player-pos gp dir)
+  (cond
+    [(string=? dir "UP") (make-posn (posn-x gp) (sub1 (posn-y gp)))]
+    [(string=? dir "DOWN") (make-posn (posn-x gp) (add1 (posn-y gp)))]
+    [(string=? dir "LEFT") (make-posn (sub1 (posn-x gp)) (posn-y gp))]
+    [(string=? dir "RIGHT") (make-posn (add1 (posn-x gp)) (posn-y gp))]))
+
+(check-expect (new-player-pos (make-posn 1 1) "UP") (make-posn 1 0))
+(check-expect (new-player-pos (make-posn 1 1) "DOWN") (make-posn 1 2))
+(check-expect (new-player-pos (make-posn 1 1) "LEFT") (make-posn 0 1))
+(check-expect (new-player-pos (make-posn 1 1) "RIGHT") (make-posn 2 1))
+
+; valid-gridposn? : GridPosn Natural -> Boolean
+; Checks if gp is on the grid
+(define (valid-gridposn? gp side)
+  (and (<= 0 (posn-x gp) (sub1 side)) (<= 0 (posn-y gp) (sub1 side))))
+
+(check-expect (valid-gridposn? (make-posn -1 0) 4) #f)
+(check-expect (valid-gridposn? (make-posn 4 0) 4) #f)
+(check-expect (valid-gridposn? (make-posn 2 -1) 4) #f)
+(check-expect (valid-gridposn? (make-posn 3 5) 4) #f)
+(check-expect (valid-gridposn? (make-posn 2 2) 4) #t)
+
+; new-selected : Block -> Block
+; selects a new block to place
+(define (new-selected b)
+    (cond
+    [(tnt? b) "Water"]
+    [(string=? b "Water") "Grass"]
+    [(string=? b "Grass") "Rock"]
+    [(string=? b "Rock") "Gold"]
+    [(string=? b "Gold") "Wood"]
+    [(string=? b "Wood") (make-tnt TNT-FUSE)]))
+
+(check-expect (new-selected (make-tnt TNT-FUSE)) "Water")
+(check-expect (new-selected "Water") "Grass")
+(check-expect (new-selected "Grass") "Rock")
+(check-expect (new-selected "Rock") "Gold")
+(check-expect (new-selected "Gold") "Wood")
+(check-expect (new-selected "Wood") (make-tnt TNT-FUSE))
 
 ;;; World Generation Functions ;;;
 
