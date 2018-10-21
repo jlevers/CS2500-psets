@@ -136,7 +136,11 @@
 ; - (cons Cell Grid)
 ; Interpretation: A grid the player plays on. (0,0) is at the upper left-hand corner of the grid.
 ; Examples
-(define grid0 '())
+(define grid0 (list (make-cell (make-posn 0 0) '())))
+(define grid-empty (list (make-cell (make-posn 0 0) '())
+                         (make-cell (make-posn 1 0) '())
+                         (make-cell (make-posn 0 1) '())
+                         (make-cell (make-posn 1 1) '())))
 (define grid1 (list (make-cell (make-posn 0 0) (list BLOCK-WA))
                     (make-cell (make-posn 0 1) (list BLOCK-WA))
                     (make-cell (make-posn 0 2) (list BLOCK-WA))
@@ -164,6 +168,15 @@
                     (make-cell (make-posn 2 0) (list BLOCK-WA))
                     (make-cell (make-posn 2 1) (list BLOCK-WA))
                     (make-cell (make-posn 2 2) (list BLOCK-WA))))
+(define grid4 (list (make-cell (make-posn 0 0) (list BLOCK-RO))
+                    (make-cell (make-posn 0 1) (list BLOCK-GO))
+                    (make-cell (make-posn 0 2) (list BLOCK-RO))
+                    (make-cell (make-posn 1 0) (list BLOCK-RO))
+                    (make-cell (make-posn 1 1) (list BLOCK-WA))
+                    (make-cell (make-posn 1 2) (list BLOCK-WA))
+                    (make-cell (make-posn 2 0) (list BLOCK-WA))
+                    (make-cell (make-posn 2 1) (list BLOCK-RO))
+                    (make-cell (make-posn 2 2) (list BLOCK-WA))))
 
 ; Template
 #;
@@ -174,7 +187,7 @@
 
 
 (define-struct world [player grid clock])
-; A World is a (make-world Player Grid)
+; A World is a (make-world Player Grid Natural)
 ; Interpretation
 ; - the first field is the game player in the world.
 ; - the second field is state of the game grid that the player plays on.
@@ -183,6 +196,7 @@
 (define world0 (make-world player1 grid0 0))
 (define world1 (make-world player2 grid1 GOLD-TIMER))
 (define world2 (make-world player2 grid2 1))
+(define world3 (make-world player1 grid4 0))
 
 ; Template
 #;
@@ -333,7 +347,7 @@
       [(empty? possible-positions) g]
       [(cons? possible-positions)
        (local ((define selected-position (pick-random-element possible-positions)))
-       (map (λ (c) (add-gold c selected-position)) g))])))
+         (map (λ (c) (add-gold c selected-position)) g))])))
 
 ; 
 
@@ -589,7 +603,7 @@
   (foldr draw-cell img g))
 
 (check-expect (draw-grid grid0 empty-image)
-              empty-image)
+              EMPTY-BLOCK)
 (check-expect (draw-grid grid1 empty-image)
               (above
                (foldr beside empty-image (make-list 3 WATER-BLOCK))
@@ -730,30 +744,9 @@
 (define (key-handler w ke)
   w)
 
-; move-player : Player Direction Natural -> Player
-; Moves the player based on user input
-(define (move-player p dir side)
-  (local [(define new-pos (new-player-pos (player-pos p) dir))]
-  (if (valid-gridposn? new-pos side)
-      (make-player new-pos dir (player-selected p) (player-score p))
-      (make-player (player-pos p) dir (player-selected p) (player-score p)))))
-
-(check-expect (move-player player1 "UP" 3) (make-player (make-posn 0 0) "UP" "Wood" 0))
-(check-expect (move-player player1 "RIGHT" 3) (make-player (make-posn 1 0) "RIGHT" "Wood" 0))
-
-; new-player-pos : GridPosn Direction -> GridPosn
-; Changes grid position to move 1 in given direction, if still on grid
-(define (new-player-pos gp dir)
-  (cond
-    [(string=? dir "UP") (make-posn (posn-x gp) (sub1 (posn-y gp)))]
-    [(string=? dir "DOWN") (make-posn (posn-x gp) (add1 (posn-y gp)))]
-    [(string=? dir "LEFT") (make-posn (sub1 (posn-x gp)) (posn-y gp))]
-    [(string=? dir "RIGHT") (make-posn (add1 (posn-x gp)) (posn-y gp))]))
-
-(check-expect (new-player-pos (make-posn 1 1) "UP") (make-posn 1 0))
-(check-expect (new-player-pos (make-posn 1 1) "DOWN") (make-posn 1 2))
-(check-expect (new-player-pos (make-posn 1 1) "LEFT") (make-posn 0 1))
-(check-expect (new-player-pos (make-posn 1 1) "RIGHT") (make-posn 2 1))
+; place-block
+; smash-block
+; smash-gold
 
 ; valid-gridposn? : GridPosn Natural -> Boolean
 ; Checks if gp is on the grid
@@ -766,22 +759,217 @@
 (check-expect (valid-gridposn? (make-posn 3 5) 4) #f)
 (check-expect (valid-gridposn? (make-posn 2 2) 4) #t)
 
+; smash-block : World -> World
+; Attempts to smash the block in front of the player
+(define (smash-block w)
+  (local [(define p (world-player w))
+          (define g (world-grid w))
+          (define side-length (sqrt (length (world-grid w))))
+          (define smash-pos (in-front-of-player-pos (player-pos p) (player-direction p)))]
+    (if (valid-gridposn? smash-pos side-length)
+        (deal-with-gold w smash-pos)
+        w)))    
+
+(check-expect (smash-block world3)
+              (make-world player1 (list
+                                   (make-cell (make-posn 1 0) '())
+                                   (make-cell (make-posn 0 0) (list BLOCK-RO))
+                                   (make-cell (make-posn 0 1) (list BLOCK-GO))
+                                   (make-cell (make-posn 0 2) (list BLOCK-RO))
+                                   (make-cell (make-posn 1 1) (list BLOCK-WA))
+                                   (make-cell (make-posn 1 2) (list BLOCK-WA))
+                                   (make-cell (make-posn 2 0) (list BLOCK-WA))
+                                   (make-cell (make-posn 2 1) (list BLOCK-RO))
+                                   (make-cell (make-posn 2 2) (list BLOCK-WA))) 0))
+(check-expect (smash-block (make-world (make-player (make-posn 0 0) "DOWN" "Wood" 0) grid4 0))
+              (make-world (make-player (make-posn 0 0) "DOWN" "Wood" 1)
+                          (list (make-cell (make-posn 0 1) '())
+                                (make-cell (make-posn 0 0) (list BLOCK-RO))
+                                (make-cell (make-posn 0 2) (list BLOCK-RO))
+                                (make-cell (make-posn 1 0) (list BLOCK-RO))
+                                (make-cell (make-posn 1 1) (list BLOCK-WA))
+                                (make-cell (make-posn 1 2) (list BLOCK-WA))
+                                (make-cell (make-posn 2 0) (list BLOCK-WA))
+                                (make-cell (make-posn 2 1) (list BLOCK-RO))
+                                (make-cell (make-posn 2 2) (list BLOCK-WA))) 0))
+(check-expect (smash-block (make-world player1 grid-empty 0)) (make-world player1 grid-empty 0))
+(check-expect (smash-block (make-world player1 grid0 0)) (make-world player1 grid0 0))
+
+; deal-with-gold : World GridPosn -> World
+; Deals with gold
+(define (deal-with-gold w gp)
+  (local [(define g (world-grid w))
+          (define to-smash (search-for-cell gp g))]
+    (cond
+      [(member BLOCK-GO (cell-blocks to-smash))
+       (make-world (increment-score (world-player w)) (smash-cell to-smash g) (world-clock w))]
+      [else
+       (make-world (world-player w) (smash-cell to-smash g) (world-clock w))])))
+
+; smash-cell : Cell Grid -> Grid
+; Removes the top block from c in g
+(define (smash-cell cell g)
+  (cond
+    [(empty? (cell-blocks cell)) g]
+    [else
+     (cons
+      (make-cell (cell-pos cell) (rest (cell-blocks cell)))
+      (filter
+       (λ (c) (not (posn=? (cell-pos c) (cell-pos cell))))
+       g))]))
+
+(define mined-grid1 (list (make-cell (make-posn 1 1) '())
+                          (make-cell (make-posn 0 0) (list BLOCK-WA))
+                          (make-cell (make-posn 0 1) (list BLOCK-WA))
+                          (make-cell (make-posn 0 2) (list BLOCK-WA))
+                          (make-cell (make-posn 1 0) (list BLOCK-WA))                          
+                          (make-cell (make-posn 1 2) (list BLOCK-WA))
+                          (make-cell (make-posn 2 0) (list BLOCK-WA))
+                          (make-cell (make-posn 2 1) (list BLOCK-WA))
+                          (make-cell (make-posn 2 2) (list BLOCK-WA))))
+
+(check-expect (smash-cell initial-cell grid1) mined-grid1)
+(check-expect (smash-cell empty-cell mined-grid1) mined-grid1)
+
+; increment-score : Player -> Player
+; Increments the score of player p
+(define (increment-score p)
+  (make-player
+   (player-pos p)
+   (player-direction p)
+   (player-selected p)
+   (add1 (player-score p))))
+
+(check-expect (increment-score player1) (make-player gp0 DIR-RIGHT "Wood" 1))
+(check-expect (increment-score player2) (make-player gp1 DIR-LEFT "Rock" 6))
+
+; place-block : World -> World
+; attempts to place the player's selected block in front of the player
+(define (place-block w)
+  (local [(define p (world-player w))
+          (define g (world-grid w))
+          (define side-length (sqrt (length (world-grid w))))
+          (define place-pos (in-front-of-player-pos (player-pos p) (player-direction p)))]
+    (if (valid-gridposn? place-pos side-length)
+        (deal-with-place w place-pos)
+        w)))
+
+; deal-with-place : World GridPosn Block -> World
+; Deals with place with given block
+(define (deal-with-place w gp b)
+  (local [(define g (world-grid w))
+          (define to-place (search-for-cell gp g))]
+    (cond
+      [(placeable? (cell-blocks to-place) b)
+       (make-world (world-player w) (place-cell to-place b g) (world-clock w))]
+      [else w])))
+
+; place-cell : Cell Block Grid -> Grid
+; Places the top block in cell c in grid g
+(define (place-cell cell b g)
+  (cons
+   (make-cell (cell-pos cell) (cons b (cell-blocks cell)))
+   (filter
+    (λ (c) (not (posn=? (cell-pos c) (cell-pos cell))))
+    g)))
+
+; placeable? : [List-of Block] Block -> Boolean
+; determines if the given block can be placed ontop of the given stack
+(define (placeable? lob b)
+  (cond [(empty? lob) #t]
+        [(cons? lob) (block-on-block? b (first lob))]))
+
+(check-expect (placeable? '() "Grass") #t)
+(check-expect (placeable? (list BLOCK-WA) "Grass") #f)
+(check-expect (placeable? (list BLOCK-WA) "Rock") #t)
+(check-expect (placeable? (list BLOCK-RO) "Grass") #f)
+(check-expect (placeable? (list BLOCK-RO) "Rock") #t)
+
+; block-on-block? : Block Block -> Boolean
+; determines if the block b1 can go on the block b2
+(define (block-on-block? b1 b2)
+  (cond
+    [(tnt? b2) #t]
+    [(and (string=? b2 "Water") (not (tnt? b1)) (string=? b1 "Rock")) #t]
+    [(and (string=? b2 "Rock") (not (tnt? b1)) (string=? b1 "Rock")) #t]
+    [(string=? b2 "Grass") #t]
+    [(string=? b2 "Gold") #t]
+    [(string=? b2 "Wood") #t]
+    [else #f]))
+
+(check-expect (block-on-block? "Grass" "Grass") #t)
+(check-expect (block-on-block? "Grass" "Gold") #t)
+(check-expect (block-on-block? "Grass" "Wood") #t)
+(check-expect (block-on-block? "Grass" "Water") #f)
+(check-expect (block-on-block? "Rock" "Water") #t)
+(check-expect (block-on-block? "Grass" "Rock") #f)
+(check-expect (block-on-block? "Rock" "Rock") #t)
+
+; move-player : Player Direction Grid -> Player
+; Moves the player based on user input
+(define (move-player p dir g)
+  (local [(define new-pos (in-front-of-player-pos (player-pos p) dir))
+          (define side (sqrt (length g)))]
+    (if (and (valid-gridposn? new-pos side) (valid-movement? new-pos g))
+        (make-player new-pos dir (player-selected p) (player-score p))
+        (make-player (player-pos p) dir (player-selected p) (player-score p)))))
+
+(check-expect (move-player player1 "UP" grid2) (make-player (make-posn 0 0) "UP" "Wood" 0))
+(check-expect (move-player player1 "RIGHT" grid2) (make-player (make-posn 1 0) "RIGHT" "Wood" 0))
+(check-expect (move-player player1 "RIGHT" grid4) (make-player (make-posn 0 0) "RIGHT" "Wood" 0))
+
+; valid-movement? : GridPosn Grid -> Boolean
+; Checks if the cell that the player is trying to move to can be walked over (e.g., doesn't have rock
+; on top
+(define (valid-movement? gp g)
+  (local[(define blocks (cell-blocks (search-for-cell gp g)))]
+    (cond
+      [(empty? blocks) #true]
+      [(cons? blocks) (walkable? (first blocks))])))
+
+(check-expect (valid-movement? (make-posn 1 0) grid4) #false)
+(check-expect (valid-movement? (make-posn 0 1) grid4) #true)
+
+; walkable? : Block -> Boolean
+; Checks if the given block is rock
+(define (walkable? b)
+  (cond
+    [(tnt? b) #true]
+    [(string=? b "Rock") #false]
+    [else #true]))
+
+(check-expect (walkable? BLOCK-WA) #t)
+(check-expect (walkable? BLOCK-RO) #f)
+(check-expect (walkable? (make-tnt 23)) #t)
+
+; in-front-of-player-pos : GridPosn Direction -> GridPosn
+; Checks if the position 1 in front of the player is still on the grid
+(define (in-front-of-player-pos gp dir)
+  (cond
+    [(string=? dir "UP") (make-posn (posn-x gp) (sub1 (posn-y gp)))]
+    [(string=? dir "DOWN") (make-posn (posn-x gp) (add1 (posn-y gp)))]
+    [(string=? dir "LEFT") (make-posn (sub1 (posn-x gp)) (posn-y gp))]
+    [(string=? dir "RIGHT") (make-posn (add1 (posn-x gp)) (posn-y gp))]))
+
+(check-expect (in-front-of-player-pos (make-posn 1 1) "UP") (make-posn 1 0))
+(check-expect (in-front-of-player-pos (make-posn 1 1) "DOWN") (make-posn 1 2))
+(check-expect (in-front-of-player-pos (make-posn 1 1) "LEFT") (make-posn 0 1))
+(check-expect (in-front-of-player-pos (make-posn 1 1) "RIGHT") (make-posn 2 1))
+
 ; new-selected : Block -> Block
 ; selects a new block to place
 (define (new-selected b)
-    (cond
+  (cond
     [(tnt? b) "Water"]
     [(string=? b "Water") "Grass"]
     [(string=? b "Grass") "Rock"]
-    [(string=? b "Rock") "Gold"]
-    [(string=? b "Gold") "Wood"]
+    [(string=? b "Rock") "Wood"]
     [(string=? b "Wood") (make-tnt TNT-FUSE)]))
 
 (check-expect (new-selected (make-tnt TNT-FUSE)) "Water")
 (check-expect (new-selected "Water") "Grass")
 (check-expect (new-selected "Grass") "Rock")
-(check-expect (new-selected "Rock") "Gold")
-(check-expect (new-selected "Gold") "Wood")
+(check-expect (new-selected "Rock") "Wood")
 (check-expect (new-selected "Wood") (make-tnt TNT-FUSE))
 
 ;;; World Generation Functions ;;;
