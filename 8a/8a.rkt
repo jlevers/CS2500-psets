@@ -742,11 +742,27 @@
 ; key-handler : World KeyEvent -> World
 ; Handles user keyboard input
 (define (key-handler w ke)
-  w)
-
-; place-block
-; smash-block
-; smash-gold
+  (cond
+    [(string=? ke " ") (smash-block w)]
+    [(string=? ke "m") (make-world (make-player (player-pos (world-player w))
+                                                (player-direction (world-player w))
+                                                (new-selected (player-selected (world-player w)))
+                                                (player-score (world-player w)))
+                                   (world-grid w) (world-clock w))]
+    [(string=? ke "p") (place-block w)]
+    [(string=? ke "up") (make-world (move-player (world-player w) "UP" (world-grid w))
+                                    (world-grid w)
+                                    (world-clock w))]
+    [(string=? ke "left") (make-world (move-player (world-player w) "LEFT" (world-grid w))
+                                      (world-grid w)
+                                      (world-clock w))]
+    [(string=? ke "right") (make-world (move-player (world-player w) "RIGHT" (world-grid w))
+                                       (world-grid w)
+                                       (world-clock w))]
+    [(string=? ke "down") (make-world (move-player (world-player w) "DOWN" (world-grid w))
+                                      (world-grid w)
+                                      (world-clock w)) ]
+    [else w]))
 
 ; valid-gridposn? : GridPosn Natural -> Boolean
 ; Checks if gp is on the grid
@@ -767,7 +783,7 @@
           (define side-length (sqrt (length (world-grid w))))
           (define smash-pos (in-front-of-player-pos (player-pos p) (player-direction p)))]
     (if (valid-gridposn? smash-pos side-length)
-        (deal-with-gold w smash-pos)
+        (smash-check-gold w smash-pos)
         w)))    
 
 (check-expect (smash-block world3)
@@ -794,29 +810,54 @@
                                 (make-cell (make-posn 2 2) (list BLOCK-WA))) 0))
 (check-expect (smash-block (make-world player1 grid-empty 0)) (make-world player1 grid-empty 0))
 (check-expect (smash-block (make-world player1 grid0 0)) (make-world player1 grid0 0))
+(check-expect (smash-block (make-world (make-player (make-posn 0 0) "LEFT" "Wood" 0) grid-empty 0))
+              (make-world (make-player (make-posn 0 0) "LEFT" "Wood" 0) grid-empty 0))
 
-; deal-with-gold : World GridPosn -> World
-; Deals with gold
-(define (deal-with-gold w gp)
+; smash-check-gold : World GridPosn -> World
+; Makes sure gold gets counted when smashing blocks
+(define (smash-check-gold w gp)
   (local [(define g (world-grid w))
           (define to-smash (search-for-cell gp g))]
     (cond
-      [(member BLOCK-GO (cell-blocks to-smash))
+      [(and (cons? (cell-blocks to-smash)) (string=? BLOCK-GO (first (cell-blocks to-smash))))
        (make-world (increment-score (world-player w)) (smash-cell to-smash g) (world-clock w))]
       [else
        (make-world (world-player w) (smash-cell to-smash g) (world-clock w))])))
+
+(check-expect (smash-check-gold world1 (make-posn 1 1))
+              (make-world player2 (list
+                                   (make-cell (make-posn 1 1) '())
+                                   (make-cell (make-posn 0 0) (list "Water"))
+                                   (make-cell (make-posn 0 1) (list "Water"))
+                                   (make-cell (make-posn 0 2) (list "Water"))
+                                   (make-cell (make-posn 1 0) (list "Water"))
+                                   (make-cell (make-posn 1 2) (list "Water"))
+                                   (make-cell (make-posn 2 0) (list "Water"))
+                                   (make-cell (make-posn 2 1) (list "Water"))
+                                   (make-cell (make-posn 2 2) (list "Water"))) GOLD-TIMER))
+(check-expect (smash-check-gold world3 (make-posn 0 1))
+              (make-world (increment-score player1)
+                          (list
+                           (make-cell (make-posn 0 1) '())
+                           (make-cell (make-posn 0 0) (list "Rock"))
+                           (make-cell (make-posn 0 2) (list "Rock"))
+                           (make-cell (make-posn 1 0) (list "Rock"))
+                           (make-cell (make-posn 1 1) (list "Water"))
+                           (make-cell (make-posn 1 2) (list "Water"))
+                           (make-cell (make-posn 2 0) (list "Water"))
+                           (make-cell (make-posn 2 1) (list "Rock"))
+                           (make-cell (make-posn 2 2) (list "Water"))) 0))
+(check-expect (smash-check-gold (make-world player1 grid-empty 0) (make-posn 0 1))
+              (make-world player1 grid-empty 0))
+
 
 ; smash-cell : Cell Grid -> Grid
 ; Removes the top block from c in g
 (define (smash-cell cell g)
   (cond
     [(empty? (cell-blocks cell)) g]
-    [else
-     (cons
-      (make-cell (cell-pos cell) (rest (cell-blocks cell)))
-      (filter
-       (λ (c) (not (posn=? (cell-pos c) (cell-pos cell))))
-       g))]))
+    [else (replace-cell (make-cell (cell-pos cell) (rest (cell-blocks cell)))
+                        g)]))
 
 (define mined-grid1 (list (make-cell (make-posn 1 1) '())
                           (make-cell (make-posn 0 0) (list BLOCK-WA))
@@ -851,27 +892,66 @@
           (define side-length (sqrt (length (world-grid w))))
           (define place-pos (in-front-of-player-pos (player-pos p) (player-direction p)))]
     (if (valid-gridposn? place-pos side-length)
-        (deal-with-place w place-pos)
+        (make-world p
+                    (place-if-allowed place-pos (player-selected p) (world-grid w))
+                    (world-clock w))
         w)))
 
-; deal-with-place : World GridPosn Block -> World
-; Deals with place with given block
-(define (deal-with-place w gp b)
-  (local [(define g (world-grid w))
-          (define to-place (search-for-cell gp g))]
-    (cond
-      [(placeable? (cell-blocks to-place) b)
-       (make-world (world-player w) (place-cell to-place b g) (world-clock w))]
-      [else w])))
+(check-expect (place-block world3) world3)
+(check-expect (place-block (make-world (make-player (make-posn 0 0) "DOWN" "Wood" 0) grid4 0))
+              (make-world (make-player (make-posn 0 0) "DOWN" "Wood" 0)
+                          (list (make-cell (make-posn 0 1) (list BLOCK-WO BLOCK-GO))
+                                (make-cell (make-posn 0 0) (list BLOCK-RO))
+                                (make-cell (make-posn 0 2) (list BLOCK-RO))
+                                (make-cell (make-posn 1 0) (list BLOCK-RO))
+                                (make-cell (make-posn 1 1) (list BLOCK-WA))
+                                (make-cell (make-posn 1 2) (list BLOCK-WA))
+                                (make-cell (make-posn 2 0) (list BLOCK-WA))
+                                (make-cell (make-posn 2 1) (list BLOCK-RO))
+                                (make-cell (make-posn 2 2) (list BLOCK-WA))) 0))
+(check-expect (place-block (make-world player1 grid0 0)) (make-world player1 grid0 0))
+(check-expect (place-block (make-world (make-player (make-posn 0 0) "LEFT" "Wood" 0) grid-empty 0))
+              (make-world (make-player (make-posn 0 0) "LEFT" "Wood" 0) grid-empty 0))
 
-; place-cell : Cell Block Grid -> Grid
-; Places the top block in cell c in grid g
-(define (place-cell cell b g)
-  (cons
-   (make-cell (cell-pos cell) (cons b (cell-blocks cell)))
-   (filter
-    (λ (c) (not (posn=? (cell-pos c) (cell-pos cell))))
-    g)))
+; replace-cell : Cell Grid -> Grid
+; Replaces the cell at the same position as c on the gird
+(define (replace-cell cell g)
+  (cons cell
+        (filter (λ (c) (not (posn=? (cell-pos c) (cell-pos cell)))) g)))
+
+(check-expect (replace-cell initial-cell grid-empty)
+              (list
+               (make-cell (make-posn 1 1) (list "Water"))
+               (make-cell (make-posn 0 0) '())
+               (make-cell (make-posn 1 0) '())
+               (make-cell (make-posn 0 1) '())))
+
+; place-if-allowed : GridPosn Block Grid -> Grid
+; Places b at gp in g, if allowed
+(define (place-if-allowed gp b g)
+  (local [(define place-at (search-for-cell gp g))]
+    (cond
+      [(placeable? (cell-blocks place-at) b)
+       (replace-cell (make-cell (cell-pos place-at) (cons b (cell-blocks place-at))) g)]
+      [else g])))
+
+(check-expect (place-if-allowed (make-posn 1 1) "Wood" grid-empty)
+              (list (make-cell (make-posn 1 1) (list "Wood"))
+                    (make-cell (make-posn 0 0) '())
+                    (make-cell (make-posn 1 0) '())
+                    (make-cell (make-posn 0 1) '())))
+(check-expect (place-if-allowed (make-posn 1 1) "Grass" grid1) grid1)
+(check-expect (place-if-allowed (make-posn 1 1) "Rock" grid4)
+              (list (make-cell (make-posn 1 1) (list "Rock" "Water"))
+                    (make-cell (make-posn 0 0) (list "Rock"))
+                    (make-cell (make-posn 0 1) (list "Gold"))
+                    (make-cell (make-posn 0 2) (list "Rock"))
+                    (make-cell (make-posn 1 0) (list "Rock"))
+                    (make-cell (make-posn 1 2) (list "Water"))
+                    (make-cell (make-posn 2 0) (list "Water"))
+                    (make-cell (make-posn 2 1) (list "Rock"))
+                    (make-cell (make-posn 2 2) (list "Water"))))
+                          
 
 ; placeable? : [List-of Block] Block -> Boolean
 ; determines if the given block can be placed ontop of the given stack
