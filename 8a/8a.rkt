@@ -2,11 +2,8 @@
 ;; about the language level of this file in a form that our tools can easily process.
 #reader(lib "htdp-intermediate-lambda-reader.ss" "lang")((modname 8a) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f () #f)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Problem Set 6b (Based on 5a) ;
+; Problem Set 8a (Based on 5a) ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-; Code changes were made since 5a to make the program run cleaner.
-; Code changes completely specific to exercises 4 and 5 are marked with comments.
 
 ;;;;; REQUIRED LIBRARIES ;;;;;;;;
 
@@ -141,42 +138,58 @@
                          (make-cell (make-posn 1 0) '())
                          (make-cell (make-posn 0 1) '())
                          (make-cell (make-posn 1 1) '())))
-(define grid1 (list (make-cell (make-posn 0 0) (list BLOCK-WA))
-                    (make-cell (make-posn 0 1) (list BLOCK-WA))
-                    (make-cell (make-posn 0 2) (list BLOCK-WA))
-                    (make-cell (make-posn 1 0) (list BLOCK-WA))
-                    (make-cell (make-posn 1 1) (list BLOCK-WA))
-                    (make-cell (make-posn 1 2) (list BLOCK-WA))
-                    (make-cell (make-posn 2 0) (list BLOCK-WA))
-                    (make-cell (make-posn 2 1) (list BLOCK-WA))
-                    (make-cell (make-posn 2 2) (list BLOCK-WA))))
-(define grid2 (list (make-cell (make-posn 0 0) (list BLOCK-WA))
-                    (make-cell (make-posn 0 1) (list BLOCK-WA))
-                    (make-cell (make-posn 0 2) (list BLOCK-WA))
-                    (make-cell (make-posn 1 0) (list BLOCK-WA))
-                    (make-cell (make-posn 1 1) (list BLOCK-WA (make-tnt 0)))
-                    (make-cell (make-posn 1 2) (list BLOCK-WA))
-                    (make-cell (make-posn 2 0) (list BLOCK-WA))
-                    (make-cell (make-posn 2 1) (list BLOCK-WA))
-                    (make-cell (make-posn 2 2) (list BLOCK-WA))))
-(define grid3 (list (make-cell (make-posn 0 0) (list BLOCK-WA))
-                    (make-cell (make-posn 0 1) (list BLOCK-WA))
-                    (make-cell (make-posn 0 2) (list BLOCK-WA))
-                    (make-cell (make-posn 1 0) (list BLOCK-WA))
-                    (make-cell (make-posn 1 1) (list BLOCK-WA (make-tnt 5)))
-                    (make-cell (make-posn 1 2) (list BLOCK-WA))
-                    (make-cell (make-posn 2 0) (list BLOCK-WA))
-                    (make-cell (make-posn 2 1) (list BLOCK-WA))
-                    (make-cell (make-posn 2 2) (list BLOCK-WA))))
-(define grid4 (list (make-cell (make-posn 0 0) (list BLOCK-RO))
-                    (make-cell (make-posn 0 1) (list BLOCK-GO))
-                    (make-cell (make-posn 0 2) (list BLOCK-RO))
-                    (make-cell (make-posn 1 0) (list BLOCK-RO))
-                    (make-cell (make-posn 1 1) (list BLOCK-WA))
-                    (make-cell (make-posn 1 2) (list BLOCK-WA))
-                    (make-cell (make-posn 2 0) (list BLOCK-WA))
-                    (make-cell (make-posn 2 1) (list BLOCK-RO))
-                    (make-cell (make-posn 2 2) (list BLOCK-WA))))
+(define grid-empty-with-water (list (make-cell (make-posn 1 1) (list BLOCK-WA))
+                                    (make-cell (make-posn 0 0) '())
+                                    (make-cell (make-posn 1 0) '())
+                                    (make-cell (make-posn 0 1) '())))
+(define water-grid (list (make-cell (make-posn 0 0) (list BLOCK-WA))
+                         (make-cell (make-posn 0 1) (list BLOCK-WA))
+                         (make-cell (make-posn 1 0) (list BLOCK-WA))
+                         (make-cell (make-posn 1 1) (list BLOCK-WA))))
+(define mined-water-grid (list (make-cell (make-posn 1 1) '())
+                               (make-cell (make-posn 0 0) (list BLOCK-WA))
+                               (make-cell (make-posn 0 1) (list BLOCK-WA))
+                               (make-cell (make-posn 1 0) (list BLOCK-WA))))
+(define blowing-up-grid (list (make-cell (make-posn 0 0) (list BLOCK-WA))
+                              (make-cell (make-posn 0 1) (list BLOCK-WA))
+                              (make-cell (make-posn 0 2) (list BLOCK-WA))
+                              (make-cell (make-posn 1 0) (list BLOCK-WA))
+                              (make-cell (make-posn 1 1) (list BLOCK-WA (make-tnt 0)))
+                              (make-cell (make-posn 1 2) (list BLOCK-WA))
+                              (make-cell (make-posn 2 0) (list BLOCK-WA))
+                              (make-cell (make-posn 2 1) (list BLOCK-WA))
+                              (make-cell (make-posn 2 2) (list BLOCK-WA))))
+(define blown-up-grid (list (make-cell (make-posn 0 0) '())
+                            (make-cell (make-posn 0 1) '())
+                            (make-cell (make-posn 0 2) '())
+                            (make-cell (make-posn 1 0) '())
+                            (make-cell (make-posn 1 1) '())
+                            (make-cell (make-posn 1 2) '())
+                            (make-cell (make-posn 2 0) '())
+                            (make-cell (make-posn 2 1) '())
+                            (make-cell (make-posn 2 2) '())))
+(define not-blowing-up-grid (list (make-cell (make-posn 1 1) (list BLOCK-WA (make-tnt 5)))))
+(define decremented-grid (list (make-cell (make-posn 1 1) (list BLOCK-WA (make-tnt 4)))))
+(define interactive-grid (list (make-cell (make-posn 0 0) (list BLOCK-RO))
+                               (make-cell (make-posn 0 1) (list BLOCK-GO))
+                               (make-cell (make-posn 1 0) (list BLOCK-RO))
+                               (make-cell (make-posn 1 1) (list BLOCK-WA))))
+(define interactive-grid-smashed-down (list (make-cell (make-posn 0 1) '())
+                                            (make-cell (make-posn 0 0) (list BLOCK-RO))
+                                            (make-cell (make-posn 1 0) (list BLOCK-RO))
+                                            (make-cell (make-posn 1 1) (list BLOCK-WA))))
+(define interactive-grid-smashed-right (list (make-cell (make-posn 1 0) '())
+                                             (make-cell (make-posn 0 0) (list BLOCK-RO))
+                                             (make-cell (make-posn 0 1) (list BLOCK-GO))
+                                             (make-cell (make-posn 1 1) (list BLOCK-WA))))
+(define interactive-grid-placed-down (list (make-cell (make-posn 0 1) (list BLOCK-WO BLOCK-GO))
+                                           (make-cell (make-posn 0 0) (list BLOCK-RO))
+                                           (make-cell (make-posn 1 0) (list BLOCK-RO))
+                                           (make-cell (make-posn 1 1) (list BLOCK-WA))))
+(define interactive-grid-placed-diagonal (list (make-cell (make-posn 1 1) (list BLOCK-RO BLOCK-WA))
+                                               (make-cell (make-posn 0 0) (list BLOCK-RO))
+                                               (make-cell (make-posn 0 1) (list BLOCK-GO))
+                                               (make-cell (make-posn 1 0) (list BLOCK-RO))))
 
 ; Template
 #;
@@ -194,9 +207,9 @@
 ; - the third is the clock keeping track of the number of ticks elapsed.
 ; Examples
 (define world0 (make-world player1 grid0 0))
-(define world1 (make-world player2 grid1 GOLD-TIMER))
-(define world2 (make-world player2 grid2 1))
-(define world3 (make-world player1 grid4 0))
+(define world1 (make-world player2 water-grid GOLD-TIMER))
+(define world2 (make-world player2 blowing-up-grid 1))
+(define world3 (make-world player1 interactive-grid 0))
 
 ; Template
 #;
@@ -244,12 +257,10 @@
 (define TNT-TEXTSIZE (floor (/ CELL-HEIGHT 4)))
 (define TNT-TEXTCOLOR "black")
 
-
 ;; Player
 (define PLAYER-POLY (list (make-posn 5 (- CELL-HEIGHT 5))
                           (make-posn (floor (/ CELL-WIDTH 2)) 5)
                           (make-posn (- CELL-WIDTH 5) (- CELL-HEIGHT 5))))
-
 (define PLAYER-UP (overlay (polygon PLAYER-POLY
                                     "outline"
                                     (make-pen "black" 3 "solid" "projecting" "miter"))
@@ -257,7 +268,6 @@
                                     "solid"
                                     "white")
                            (rectangle CELL-WIDTH CELL-HEIGHT "solid" "transparent")))
-
 (define PLAYER-LEFT (rotate 90 PLAYER-UP))
 (define PLAYER-DOWN (rotate 180 PLAYER-UP))
 (define PLAYER-RIGHT (rotate -90 PLAYER-UP))
@@ -268,7 +278,6 @@
 (define ARROW-LEFT (rotate 90 ARROW-UP))
 (define ARROW-DOWN (rotate 180 ARROW-UP))
 (define ARROW-RIGHT (rotate -90 ARROW-UP))
-
 
 ;; Menu
 (define MENU-PAD (rectangle 1 50 "solid" "transparent")) ; Invisible vertical padding for menu item
@@ -308,8 +317,7 @@
               (update-gold (world-clock w) (decrement-fuse (update-tnt (world-grid w))))
               (add1 (world-clock w))))
 
-(check-expect (update-world (make-world player1 grid1 5)) (make-world player1 grid1 6))
-
+(check-expect (update-world (make-world player1 water-grid 5)) (make-world player1 water-grid 6))
 
 ; update-gold : Natural Grid -> Grid
 ; Using value of world clock, and grid, produces new grid which has new gold if enough time passed.
@@ -318,27 +326,25 @@
       (place-random-gold g)
       g))
 
-(check-expect (update-gold 1 grid2) grid2)
+(check-expect (update-gold 1 blowing-up-grid) blowing-up-grid)
 
 ; Does the gold block exist in our water world?
-(check-expect (member "Gold"
-                      (apply append
-                             (map cell-blocks
-                                  (update-gold GOLD-TIMER grid1))))
+(check-expect (member "Gold" (apply append (map cell-blocks (update-gold GOLD-TIMER water-grid))))
               #t)
 
 ; Is the gold beneath existing materials?
-(check-expect (not (member "Gold"
-                           (map (compose first cell-blocks)
-                                (update-gold GOLD-TIMER grid1)))) #t)
+(check-expect (member "Gold" (map (compose first cell-blocks) (update-gold GOLD-TIMER water-grid)))
+              #f)
 
 ; place-random-gold : Grid -> Grid
 ; Randomly chooses a cell to place gold in, and places gold somewhere in the blocks list.
 (define (place-random-gold g)
   (local (
-          (define possible-positions (map cell-pos (filter (λ (cell) (cons? (cell-blocks cell))) g)))
+          ; Return all possible positions of cells with blocks.
+          (define possible-positions (map cell-pos (filter (λ (cell)
+                                                             (cons? (cell-blocks cell))) g)))
           ; add-gold : Cell -> Cell
-          ; Adds gold below the top item in the cell
+          ; Adds gold to the given cell beneath existing materials.
           (define (add-gold cell cell-position)
             (if (posn=? cell-position (cell-pos cell))
                 (add-gold-to-cell cell)
@@ -349,8 +355,6 @@
        (local ((define selected-position (pick-random-element possible-positions)))
          (map (λ (c) (add-gold c selected-position)) g))])))
 
-; 
-
 (check-expect (place-random-gold (list (make-cell (make-posn 0 0) (list BLOCK-WA))))
               (list (make-cell (make-posn 0 0) (list BLOCK-WA BLOCK-GO))))
 ; Gold must never be placed in empty cells.
@@ -360,7 +364,7 @@
                     (make-cell (make-posn 0 1) '())))
 
 ; add-gold-to-cell : Cell -> Cell
-; Adds gold to cell
+; Adds gold beneath the top block in the given cell.
 (define (add-gold-to-cell cell)
   (make-cell (cell-pos cell)
              (cons (first (cell-blocks cell))
@@ -416,16 +420,7 @@
             (make-cell (cell-pos cell) (map decrement-block (cell-blocks cell)))))
     (map decrement-cell g)))
 
-(check-expect (decrement-fuse grid3)
-              (list (make-cell (make-posn 0 0) (list BLOCK-WA))
-                    (make-cell (make-posn 0 1) (list BLOCK-WA))
-                    (make-cell (make-posn 0 2) (list BLOCK-WA))
-                    (make-cell (make-posn 1 0) (list BLOCK-WA))
-                    (make-cell (make-posn 1 1) (list BLOCK-WA (make-tnt 4)))
-                    (make-cell (make-posn 1 2) (list BLOCK-WA))
-                    (make-cell (make-posn 2 0) (list BLOCK-WA))
-                    (make-cell (make-posn 2 1) (list BLOCK-WA))
-                    (make-cell (make-posn 2 2) (list BLOCK-WA))))
+(check-expect (decrement-fuse not-blowing-up-grid) decremented-grid)
 
 ; update-tnt : Grid -> Grid
 ; Finds all the tnt blocks in the grid. If tnt's fuse has run out, explode.
@@ -442,8 +437,8 @@
                 g)))
     (foldr explode-cell g g)))
 
-(check-expect (update-tnt grid2) (explosion grid2 (make-posn 1 1)))
-(check-expect (update-tnt grid3) grid3)
+(check-expect (update-tnt blowing-up-grid) blown-up-grid)
+(check-expect (update-tnt not-blowing-up-grid) not-blowing-up-grid)
 
 ; primed-tnt? : Block -> Boolean
 ; Returns true if it is a TNT at timer = 0, false otherwise
@@ -510,7 +505,7 @@
 (define (explosion g gp)
   (map (λ (cell) (update-block-for-tnt cell gp)) g))
 
-(check-expect (explosion grid2 (make-posn 1 1))
+(check-expect (explosion blowing-up-grid (make-posn 1 1))
               (list (make-cell (make-posn 0 0) '())
                     (make-cell (make-posn 0 1) '())
                     (make-cell (make-posn 0 2) '())
@@ -604,11 +599,9 @@
 
 (check-expect (draw-grid grid0 empty-image)
               EMPTY-BLOCK)
-(check-expect (draw-grid grid1 empty-image)
-              (above
-               (foldr beside empty-image (make-list 3 WATER-BLOCK))
-               (foldr beside empty-image (make-list 3 WATER-BLOCK))
-               (foldr beside empty-image (make-list 3 WATER-BLOCK))))
+(check-expect (draw-grid water-grid empty-image)
+              (above (foldr beside empty-image (make-list 2 WATER-BLOCK))
+                     (foldr beside empty-image (make-list 2 WATER-BLOCK))))
 
 ; pick-player : Direction -> Image
 ; Outputs the player image for the given direction.
@@ -650,7 +643,7 @@
                   (draw-menu-item "Selected Material" (draw-block (player-selected p))))
            img))
 
-(check-expect (draw-menu player1 grid1 empty-image)
+(check-expect (draw-menu player1 water-grid empty-image)
               (above (draw-menu-item "Your Score" (draw-score 0))
                      (draw-menu-item "Your Direction" (draw-direction "RIGHT"))
                      (draw-menu-item "Beneath You" (draw-materials (list BLOCK-WA)))
@@ -696,7 +689,7 @@
 (define (top-blocks gp g)
   (truncate (cell-blocks (search-for-cell gp g)) STANDING-SEARCH-DEPTH))
 
-(check-expect (top-blocks gp0 grid1) (list BLOCK-WA))
+(check-expect (top-blocks gp0 water-grid) (list BLOCK-WA))
 (check-expect (top-blocks gp1 (list (make-cell (make-posn 0 0) (list BLOCK-WA))
                                     (make-cell (make-posn 1 2) (make-list 5 BLOCK-WA))))
               (make-list STANDING-SEARCH-DEPTH BLOCK-WA))
@@ -722,7 +715,7 @@
     (first (filter matching-cell? g))))
 
 ; The first cell is the head of the grid list.
-(check-expect (search-for-cell gp0 grid1) (first grid1))
+(check-expect (search-for-cell gp0 water-grid) (first water-grid))
 
 ; draw-materials : [List-of Block] -> Image
 ; Draws a list of blocks in a stack.
@@ -744,25 +737,22 @@
 (define (key-handler w ke)
   (cond
     [(string=? ke " ") (smash-block w)]
-    [(string=? ke "m") (make-world (make-player (player-pos (world-player w))
-                                                (player-direction (world-player w))
-                                                (new-selected (player-selected (world-player w)))
-                                                (player-score (world-player w)))
-                                   (world-grid w) (world-clock w))]
+    [(string=? ke "m") (new-player-selected w)]
     [(string=? ke "p") (place-block w)]
-    [(string=? ke "up") (make-world (move-player (world-player w) "UP" (world-grid w))
-                                    (world-grid w)
-                                    (world-clock w))]
-    [(string=? ke "left") (make-world (move-player (world-player w) "LEFT" (world-grid w))
-                                      (world-grid w)
-                                      (world-clock w))]
-    [(string=? ke "right") (make-world (move-player (world-player w) "RIGHT" (world-grid w))
-                                       (world-grid w)
-                                       (world-clock w))]
-    [(string=? ke "down") (make-world (move-player (world-player w) "DOWN" (world-grid w))
-                                      (world-grid w)
-                                      (world-clock w)) ]
+    [(string=? ke "up") (move-player-in-world w "UP")]
+    [(string=? ke "left") (move-player-in-world w "LEFT")]
+    [(string=? ke "right") (move-player-in-world w "RIGHT")]
+    [(string=? ke "down") (move-player-in-world w "DOWN")]
     [else w]))
+
+(check-expect (key-handler world1 " ") (smash-block world1))
+(check-expect (key-handler world1 "m") (new-player-selected world1))
+(check-expect (key-handler world1 "p") (place-block world1))
+(check-expect (key-handler world1 "up") (move-player-in-world world1 "UP"))
+(check-expect (key-handler world1 "left") (move-player-in-world world1 "LEFT"))
+(check-expect (key-handler world1 "right") (move-player-in-world world1 "RIGHT"))
+(check-expect (key-handler world1 "down") (move-player-in-world world1 "DOWN"))
+(check-expect (key-handler world1 "k") world1)
 
 ; valid-gridposn? : GridPosn Natural -> Boolean
 ; Checks if gp is on the grid
@@ -784,30 +774,15 @@
           (define smash-pos (in-front-of-player-pos (player-pos p) (player-direction p)))]
     (if (valid-gridposn? smash-pos side-length)
         (smash-check-gold w smash-pos)
-        w)))    
+        w)))
 
 (check-expect (smash-block world3)
-              (make-world player1 (list
-                                   (make-cell (make-posn 1 0) '())
-                                   (make-cell (make-posn 0 0) (list BLOCK-RO))
-                                   (make-cell (make-posn 0 1) (list BLOCK-GO))
-                                   (make-cell (make-posn 0 2) (list BLOCK-RO))
-                                   (make-cell (make-posn 1 1) (list BLOCK-WA))
-                                   (make-cell (make-posn 1 2) (list BLOCK-WA))
-                                   (make-cell (make-posn 2 0) (list BLOCK-WA))
-                                   (make-cell (make-posn 2 1) (list BLOCK-RO))
-                                   (make-cell (make-posn 2 2) (list BLOCK-WA))) 0))
-(check-expect (smash-block (make-world (make-player (make-posn 0 0) "DOWN" "Wood" 0) grid4 0))
+              (make-world player1 interactive-grid-smashed-right 0))
+(check-expect (smash-block (make-world (make-player (make-posn 0 0) "DOWN" "Wood" 0)
+                                       interactive-grid 0))
               (make-world (make-player (make-posn 0 0) "DOWN" "Wood" 1)
-                          (list (make-cell (make-posn 0 1) '())
-                                (make-cell (make-posn 0 0) (list BLOCK-RO))
-                                (make-cell (make-posn 0 2) (list BLOCK-RO))
-                                (make-cell (make-posn 1 0) (list BLOCK-RO))
-                                (make-cell (make-posn 1 1) (list BLOCK-WA))
-                                (make-cell (make-posn 1 2) (list BLOCK-WA))
-                                (make-cell (make-posn 2 0) (list BLOCK-WA))
-                                (make-cell (make-posn 2 1) (list BLOCK-RO))
-                                (make-cell (make-posn 2 2) (list BLOCK-WA))) 0))
+                          interactive-grid-smashed-down
+                          0))
 (check-expect (smash-block (make-world player1 grid-empty 0)) (make-world player1 grid-empty 0))
 (check-expect (smash-block (make-world player1 grid0 0)) (make-world player1 grid0 0))
 (check-expect (smash-block (make-world (make-player (make-posn 0 0) "LEFT" "Wood" 0) grid-empty 0))
@@ -825,28 +800,10 @@
        (make-world (world-player w) (smash-cell to-smash g) (world-clock w))])))
 
 (check-expect (smash-check-gold world1 (make-posn 1 1))
-              (make-world player2 (list
-                                   (make-cell (make-posn 1 1) '())
-                                   (make-cell (make-posn 0 0) (list "Water"))
-                                   (make-cell (make-posn 0 1) (list "Water"))
-                                   (make-cell (make-posn 0 2) (list "Water"))
-                                   (make-cell (make-posn 1 0) (list "Water"))
-                                   (make-cell (make-posn 1 2) (list "Water"))
-                                   (make-cell (make-posn 2 0) (list "Water"))
-                                   (make-cell (make-posn 2 1) (list "Water"))
-                                   (make-cell (make-posn 2 2) (list "Water"))) GOLD-TIMER))
+              (make-world player2 mined-water-grid GOLD-TIMER))
 (check-expect (smash-check-gold world3 (make-posn 0 1))
               (make-world (increment-score player1)
-                          (list
-                           (make-cell (make-posn 0 1) '())
-                           (make-cell (make-posn 0 0) (list "Rock"))
-                           (make-cell (make-posn 0 2) (list "Rock"))
-                           (make-cell (make-posn 1 0) (list "Rock"))
-                           (make-cell (make-posn 1 1) (list "Water"))
-                           (make-cell (make-posn 1 2) (list "Water"))
-                           (make-cell (make-posn 2 0) (list "Water"))
-                           (make-cell (make-posn 2 1) (list "Rock"))
-                           (make-cell (make-posn 2 2) (list "Water"))) 0))
+                          interactive-grid-smashed-down 0))
 (check-expect (smash-check-gold (make-world player1 grid-empty 0) (make-posn 0 1))
               (make-world player1 grid-empty 0))
 
@@ -859,18 +816,8 @@
     [else (replace-cell (make-cell (cell-pos cell) (rest (cell-blocks cell)))
                         g)]))
 
-(define mined-grid1 (list (make-cell (make-posn 1 1) '())
-                          (make-cell (make-posn 0 0) (list BLOCK-WA))
-                          (make-cell (make-posn 0 1) (list BLOCK-WA))
-                          (make-cell (make-posn 0 2) (list BLOCK-WA))
-                          (make-cell (make-posn 1 0) (list BLOCK-WA))                          
-                          (make-cell (make-posn 1 2) (list BLOCK-WA))
-                          (make-cell (make-posn 2 0) (list BLOCK-WA))
-                          (make-cell (make-posn 2 1) (list BLOCK-WA))
-                          (make-cell (make-posn 2 2) (list BLOCK-WA))))
-
-(check-expect (smash-cell initial-cell grid1) mined-grid1)
-(check-expect (smash-cell empty-cell mined-grid1) mined-grid1)
+(check-expect (smash-cell initial-cell water-grid) mined-water-grid)
+(check-expect (smash-cell empty-cell mined-water-grid) mined-water-grid)
 
 ; increment-score : Player -> Player
 ; Increments the score of player p
@@ -898,17 +845,10 @@
         w)))
 
 (check-expect (place-block world3) world3)
-(check-expect (place-block (make-world (make-player (make-posn 0 0) "DOWN" "Wood" 0) grid4 0))
+(check-expect (place-block (make-world (make-player (make-posn 0 0) "DOWN" "Wood" 0)
+                                       interactive-grid 0))
               (make-world (make-player (make-posn 0 0) "DOWN" "Wood" 0)
-                          (list (make-cell (make-posn 0 1) (list BLOCK-WO BLOCK-GO))
-                                (make-cell (make-posn 0 0) (list BLOCK-RO))
-                                (make-cell (make-posn 0 2) (list BLOCK-RO))
-                                (make-cell (make-posn 1 0) (list BLOCK-RO))
-                                (make-cell (make-posn 1 1) (list BLOCK-WA))
-                                (make-cell (make-posn 1 2) (list BLOCK-WA))
-                                (make-cell (make-posn 2 0) (list BLOCK-WA))
-                                (make-cell (make-posn 2 1) (list BLOCK-RO))
-                                (make-cell (make-posn 2 2) (list BLOCK-WA))) 0))
+                          interactive-grid-placed-down 0))
 (check-expect (place-block (make-world player1 grid0 0)) (make-world player1 grid0 0))
 (check-expect (place-block (make-world (make-player (make-posn 0 0) "LEFT" "Wood" 0) grid-empty 0))
               (make-world (make-player (make-posn 0 0) "LEFT" "Wood" 0) grid-empty 0))
@@ -920,11 +860,7 @@
         (filter (λ (c) (not (posn=? (cell-pos c) (cell-pos cell)))) g)))
 
 (check-expect (replace-cell initial-cell grid-empty)
-              (list
-               (make-cell (make-posn 1 1) (list "Water"))
-               (make-cell (make-posn 0 0) '())
-               (make-cell (make-posn 1 0) '())
-               (make-cell (make-posn 0 1) '())))
+              grid-empty-with-water)
 
 ; place-if-allowed : GridPosn Block Grid -> Grid
 ; Places b at gp in g, if allowed
@@ -935,22 +871,11 @@
        (replace-cell (make-cell (cell-pos place-at) (cons b (cell-blocks place-at))) g)]
       [else g])))
 
-(check-expect (place-if-allowed (make-posn 1 1) "Wood" grid-empty)
-              (list (make-cell (make-posn 1 1) (list "Wood"))
-                    (make-cell (make-posn 0 0) '())
-                    (make-cell (make-posn 1 0) '())
-                    (make-cell (make-posn 0 1) '())))
-(check-expect (place-if-allowed (make-posn 1 1) "Grass" grid1) grid1)
-(check-expect (place-if-allowed (make-posn 1 1) "Rock" grid4)
-              (list (make-cell (make-posn 1 1) (list "Rock" "Water"))
-                    (make-cell (make-posn 0 0) (list "Rock"))
-                    (make-cell (make-posn 0 1) (list "Gold"))
-                    (make-cell (make-posn 0 2) (list "Rock"))
-                    (make-cell (make-posn 1 0) (list "Rock"))
-                    (make-cell (make-posn 1 2) (list "Water"))
-                    (make-cell (make-posn 2 0) (list "Water"))
-                    (make-cell (make-posn 2 1) (list "Rock"))
-                    (make-cell (make-posn 2 2) (list "Water"))))
+(check-expect (place-if-allowed (make-posn 1 1) "Water" grid-empty)
+              grid-empty-with-water)
+(check-expect (place-if-allowed (make-posn 1 1) "Grass" water-grid) water-grid)
+(check-expect (place-if-allowed (make-posn 1 1) "Rock" interactive-grid)
+              interactive-grid-placed-diagonal)
                           
 
 ; placeable? : [List-of Block] Block -> Boolean
@@ -985,6 +910,18 @@
 (check-expect (block-on-block? "Grass" "Rock") #f)
 (check-expect (block-on-block? "Rock" "Rock") #t)
 
+; move-player-in-world : World Direction -> World
+; creates a new world state using the world data and requested movement.
+(define (move-player-in-world w direction)
+  (make-world (move-player (world-player w) direction (world-grid w))
+              (world-grid w)
+              (world-clock w)))
+
+(check-expect (move-player-in-world world1 "DOWN")
+              (make-world (move-player player2 "DOWN" water-grid)
+                          water-grid
+                          GOLD-TIMER))
+
 ; move-player : Player Direction Grid -> Player
 ; Moves the player based on user input
 (define (move-player p dir g)
@@ -994,9 +931,12 @@
         (make-player new-pos dir (player-selected p) (player-score p))
         (make-player (player-pos p) dir (player-selected p) (player-score p)))))
 
-(check-expect (move-player player1 "UP" grid2) (make-player (make-posn 0 0) "UP" "Wood" 0))
-(check-expect (move-player player1 "RIGHT" grid2) (make-player (make-posn 1 0) "RIGHT" "Wood" 0))
-(check-expect (move-player player1 "RIGHT" grid4) (make-player (make-posn 0 0) "RIGHT" "Wood" 0))
+(check-expect (move-player player1 "UP" blowing-up-grid)
+              (make-player (make-posn 0 0) "UP" "Wood" 0))
+(check-expect (move-player player1 "RIGHT" blowing-up-grid)
+              (make-player (make-posn 1 0) "RIGHT" "Wood" 0))
+(check-expect (move-player player1 "RIGHT" interactive-grid)
+              (make-player (make-posn 0 0) "RIGHT" "Wood" 0))
 
 ; valid-movement? : GridPosn Grid -> Boolean
 ; Checks if the cell that the player is trying to move to can be walked over (e.g., doesn't have rock
@@ -1007,8 +947,8 @@
       [(empty? blocks) #true]
       [(cons? blocks) (walkable? (first blocks))])))
 
-(check-expect (valid-movement? (make-posn 1 0) grid4) #false)
-(check-expect (valid-movement? (make-posn 0 1) grid4) #true)
+(check-expect (valid-movement? (make-posn 1 0) interactive-grid) #false)
+(check-expect (valid-movement? (make-posn 0 1) interactive-grid) #true)
 
 ; walkable? : Block -> Boolean
 ; Checks if the given block is rock
@@ -1035,6 +975,27 @@
 (check-expect (in-front-of-player-pos (make-posn 1 1) "DOWN") (make-posn 1 2))
 (check-expect (in-front-of-player-pos (make-posn 1 1) "LEFT") (make-posn 0 1))
 (check-expect (in-front-of-player-pos (make-posn 1 1) "RIGHT") (make-posn 2 1))
+
+; new-player-selected : World -> World
+; returns a new world where the player's selected material has been cycled.
+(define (new-player-selected w)
+  (make-world (cycle-player-selection (world-player w)) (world-grid w) (world-clock w)))
+
+(check-expect (new-player-selected world0)
+              (make-world (cycle-player-selection player1) grid0 0))
+
+; cycle-player-selection : Player -> Player
+; cycles the given player's selection.
+(define (cycle-player-selection p)
+  (make-player (player-pos p)
+               (player-direction p)
+               (new-selected (player-selected p))
+               (player-score p)))
+
+; We want to test that inputs are different. Have to use eq? because of tnt struct.
+(check-expect (not (eq? (player-selected (cycle-player-selection player1))
+                        (player-selected player1)))
+              #t)
 
 ; new-selected : Block -> Block
 ; selects a new block to place
