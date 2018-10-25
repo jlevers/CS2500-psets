@@ -1,6 +1,22 @@
 ;; The first three lines of this file were inserted by DrRacket. They record metadata
 ;; about the language level of this file in a form that our tools can easily process.
 #reader(lib "htdp-intermediate-lambda-reader.ss" "lang")((modname 8b) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f () #f)))
+;           ;      
+;           ;      
+;    ;;;;;  ;      
+;   ;     ; ;      
+;   ;     ; ;;;;;  
+;   ;     ; ;;  ;; 
+;    ;;;;;  ;    ; 
+;   ;;   ;; ;    ; 
+;   ;     ; ;    ; 
+;   ;;    ; ;;  ;; 
+;    ;;;;;  ;;;;;  
+;
+; Problem set ^ with Mathias and Jesse.
+;                  
+
+
 (define-struct leaf [])
 (define-struct node [key info left right])
 ; A [BST X Y] is one of:
@@ -185,9 +201,10 @@
 (define (submap lo hi tm)
   (make-tree-map (bst-submap lo hi (tree-map-comp tm) (tree-map-tree tm)) (tree-map-comp tm)))
 
-; (check-expect (submap 0 1 tm0) tm0)
+(check-expect (tree-map-tree (submap 0 1 tm0)) bst0)
 
 ; bst-submap : X X [Comparison X] [BST X Y] -> [BST X Y]
+; Creates a submap of the given binary search tree with each possible case of intervals checked.
 (define (bst-submap lo hi comp bst)
   (cond
     [(leaf? bst) (make-leaf)]
@@ -258,6 +275,8 @@
 (define sexp5 (list sexp3 sexp2))
 (define sexp6 (list sexp4 sexp5))
 
+(define crazy-sexp '((((((a) b c d ((e))))))))
+
 ; topsy-turvy : SExpr -> SExpr
 ; inverts the order of the given s-expression.
 (define (topsy-turvy s)
@@ -279,15 +298,26 @@
 (check-expect (topsy-turvy-list sexp4) sexp5)
 (check-expect (topsy-turvy-list sexp6) sexp6)
 
-; find-path : SExpr Symbol -> [List-of Natural]
+; find-path : SExpr Symbol -> [Union [List-of Natural] False]
 ; finds the shortest path to s in sexp and outputs it using a list of indices.
 (define (find-path sexp s)
-  (foldl (λ (sexp-inner lon) (number-path sexp-inner lon s)) '() sexp))
+  (cond 
+    [(symbol? sexp) (if (symbol=? sexp s) empty #f)]
+    [(empty? sexp) #f]
+    [(cons? sexp) (local
+                    [(define first-path (find-path (first sexp) s))
+                     (define rest-path (find-path (rest sexp) s))]
+                    (cond [(empty? first-path) (cons 0 '())]
+                          [(cons? first-path) (cons 0 first-path)]
+                          [(cons? rest-path) (cons (add1 (first rest-path)) (rest rest-path))]
+                          [else #f]))]))
 
-; number-path : SExpr [List-of-Natural] Symbol -> [List-of-Natural]
-(define (number-path sexp lon s)
-  (cond [(symbol? sexp) (if (symbol=? sexp s)
-                            lon
-                            (cons (add1 (first lon)) (rest lon)))]
-        [(empty? sexp) lon] ; TODO: Come back to this.
-        [(cons? sexp)]))
+(check-expect (find-path sexp1 'a) #false)
+(check-expect (find-path sexp2 'a) '())
+(check-expect (find-path sexp3 'a) #false)
+(check-expect (find-path sexp4 'b) '(1))
+(check-expect (find-path sexp4 'b) '(1))
+(check-expect (find-path sexp5 'b) '(0))
+(check-expect (find-path sexp6 'b) '(0 1))
+
+(check-expect (find-path crazy-sexp 'e) (list 0 0 0 0 4 0 0))
