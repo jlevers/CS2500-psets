@@ -139,12 +139,15 @@
 (check-error (valid-order? '(grass water)) INVALID-MATERIAL-ORDER)
 (check-expect (valid-order? '(grass rock)) INVALID-MATERIAL-ORDER)
 
+(define MATERIAL-MISMATCH "Expected both materials to either both cons or both identical symbols")
 ; material-type=? : SExpr SExpr -> Boolean
 ; Checks if two S-expression material types are equal
+; TODO Are we checking that it's one of the appropriate matieral symbols?
 (define (material-type=? s1 s2)
   (cond [(and (cons? s1) (cons? s2)) #true]
-        [(or (cons? s1) (cons? s2)) #false]
-        [(symbol=? s1 s2) #true]))
+        [(or (cons? s1) (cons? s2)) (error MATERIAL-MISMATCH)]
+        [(symbol=? s1 s2) #true]
+        [else (error MATERIAL-MISMATCH)]))
 
 (check-expect (material-type=? 'rock 'rock) #true)
 (check-expect (material-type=? 'rock 'grass) #true)
@@ -163,7 +166,7 @@
         [else (error PLAYERS-CATCH-ALL)]))
 
 (check-expect (valid-players-sexpr? '()) #true)
-(check-expect (valid-players-sexpr? 'test) PLAYERS-NOT-LIST)
+(check-error (valid-players-sexpr? 'test) PLAYERS-NOT-LIST)
 
 
 (define PLAYER-NOT-CONS "Expected player to be a cons, received something else.")
@@ -176,11 +179,11 @@
 (define (valid-player? sexp)
   (cond [(not (cons? sexp)) (error PLAYER-NOT-CONS)]
         [(not (= (length sexp) 2)) (error PLAYER-WRONG-LENGTH)]
-        [(not (>= (first sexp) 0)) (error PLAYER-INVALID-ID)]
+        [(or (not (integer? (first sexp))) (not (>= (first sexp) 0))) (error PLAYER-INVALID-ID)]
         [(not (member? (second sexp) SYMBOL-DIR-LIST)) (error PLAYER-INVALID-DIRECTION)]
         [else #true]))
 
-(check-expect (valid-player '(1 'up)) #true)
+ (check-expect (valid-player? '(1 'up)) #true)
 (check-error (valid-player? '()) PLAYER-NOT-CONS)
 (check-error (valid-player? '(1)) PLAYER-WRONG-LENGTH)
 (check-error (valid-player? '(3.5 'left)) PLAYER-INVALID-ID)
