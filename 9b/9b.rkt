@@ -3,43 +3,43 @@
 #reader(lib "htdp-intermediate-lambda-reader.ss" "lang")((modname 9b) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f () #f)))
 ; A Bool is a [X X -> X]
 
-(define B1 (λ (x1 x2) x1))
-(define B2 (λ (x1 x2) x2))
+(define BTRUE (λ (x1 x2) x1))
+(define BFALSE (λ (x1 x2) x2))
 
 ; bool->boolean : Bool -> Boolean
 ; Converts a bool to a boolean
 (define (bool->boolean b)
   (b #true #false))
 
-(check-expect (bool->boolean B1) #true)
-(check-expect (bool->boolean B2) #false)
+(check-expect (bool->boolean BTRUE) #true)
+(check-expect (bool->boolean BFALSE) #false)
 
 ; and/bool : Bool Bool -> Bool
 ; Functions analogously to and
 (define (and/bool b1 b2)
   (λ (x1 x2) (b1 (b2 x1 x2) (b1 x1 x2))))
 
-(check-expect (bool->boolean (and/bool B1 B1)) #true)
-(check-expect (bool->boolean (and/bool B1 B2)) #false)
-(check-expect (bool->boolean (and/bool B2 B1)) #false)
-(check-expect (bool->boolean (and/bool B2 B2)) #false)
+(check-expect (bool->boolean (and/bool BTRUE BTRUE)) #true)
+(check-expect (bool->boolean (and/bool BTRUE BFALSE)) #false)
+(check-expect (bool->boolean (and/bool BFALSE BTRUE)) #false)
+(check-expect (bool->boolean (and/bool BFALSE BFALSE)) #false)
 
 ; or/bool : Bool Bool -> Bool
 ; Functions analogously to or
 (define (or/bool b1 b2)
   (λ (x1 x2) (b1 (b1 x1 x2) (b2 x1 x2))))
 
-(check-expect (bool->boolean (or/bool B1 B1)) #true)
-(check-expect (bool->boolean (or/bool B1 B2)) #true)
-(check-expect (bool->boolean (or/bool B2 B1)) #true)
-(check-expect (bool->boolean (or/bool B2 B2)) #false)
+(check-expect (bool->boolean (or/bool BTRUE BTRUE)) #true)
+(check-expect (bool->boolean (or/bool BTRUE BFALSE)) #true)
+(check-expect (bool->boolean (or/bool BFALSE BTRUE)) #true)
+(check-expect (bool->boolean (or/bool BFALSE BFALSE)) #false)
 
 ; not/bool : Bool Bool -> Bool
 ; Functions analogously to not
 (define (not/bool b1)
   (λ (x1 x2) (b1 x2 x1)))
 
-(check-expect (bool->boolean (not/bool B2)) #true)
-(check-expect (bool->boolean (not/bool B1)) #false)
+(check-expect (bool->boolean (not/bool BFALSE)) #true)
+(check-expect (bool->boolean (not/bool BTRUE)) #false)
 
 
