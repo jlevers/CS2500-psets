@@ -11,38 +11,35 @@
 (define (bool->boolean b)
   (b #true #false))
 
+(check-expect (bool->boolean B1) #true)
+(check-expect (bool->boolean B2) #false)
 
 ; and/bool : Bool Bool -> Bool
 ; Functions analogously to and
 (define (and/bool b1 b2)
   (λ (x1 x2) (b1 (b2 x1 x2) (b1 x1 x2))))
 
+(check-expect (bool->boolean (and/bool B1 B1)) #true)
+(check-expect (bool->boolean (and/bool B1 B2)) #false)
+(check-expect (bool->boolean (and/bool B2 B1)) #false)
+(check-expect (bool->boolean (and/bool B2 B2)) #false)
+
 ; or/bool : Bool Bool -> Bool
 ; Functions analogously to or
 (define (or/bool b1 b2)
   (λ (x1 x2) (b1 (b1 x1 x2) (b2 x1 x2))))
+
+(check-expect (bool->boolean (or/bool B1 B1)) #true)
+(check-expect (bool->boolean (or/bool B1 B2)) #true)
+(check-expect (bool->boolean (or/bool B2 B1)) #true)
+(check-expect (bool->boolean (or/bool B2 B2)) #false)
 
 ; not/bool : Bool Bool -> Bool
 ; Functions analogously to not
 (define (not/bool b1)
   (λ (x1 x2) (b1 x2 x1)))
 
+(check-expect (bool->boolean (not/bool B2)) #true)
+(check-expect (bool->boolean (not/bool B1)) #false)
 
-#|
-B1
-B1
-x1
-
-B1
-B2
-x1
-
-B2
-B1
-x1
-
-B2
-B2
-x2
-|#
 
