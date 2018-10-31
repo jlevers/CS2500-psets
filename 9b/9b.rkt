@@ -43,3 +43,82 @@
 (check-expect (bool->boolean (not/bool BTRUE)) #false)
 
 
+; A LeafyTree is one of:
+; - 'leaf
+; - (make-node LeafyTree LeafyTree)
+(define-struct node [l r])
+; Examples:
+(define T0 'leaf)
+(define T1 (make-node T0 T0))
+(define T2 (make-node T1 T0))
+(define T3 (make-node T1 T2))
+; Template
+(define (leafy-temp lt)
+  (cond
+    [(node? lt) (... (leafy-temp (node-l lt)) ... (leafy-temp (node-r lt)) ...)]
+    [(symbol? lt) ...]))
+
+; height: LeafyTree -> Number
+; Determines the height of a given leafy-tree
+(define (height lt)
+  (cond
+    [(node? lt) (max (add1 (height (node-l lt))) (add1 (height (node-r lt))))]
+    [(symbol? lt) 0]))
+(check-expect (height T0) 0)
+(check-expect (height T1) 1)
+(check-expect (height T2) 2)
+(check-expect (height T3) 3)
+
+; all-leafy-trees : Natural -> [List-of LeafyTree]
+; Given a natural number n, outputs the list of all leafy trees of height n
+(define (all-leafy-trees n)
+  (all-leafy T0 n 0))
+
+; all-leafy-trees-iter : LeafyTree Natural Natural -> [List-of LeafyTree]
+; Given a goal height n and a current height h, outputs the next three LeafyTrees.
+(define (all-leafy-trees-iter lt n h)
+  (if (= n h)
+      lt
+      (cond [(node? lt) (make-node (all-leafy-trees-iter lt n (add1 h)) (all-leafy-trees-iter lt n (add1 h)))]
+            [(symbol? lt) (all-leafy-trees-iter (make-node 'leaf 'leaf) n (add1 h))])))
+
+(define (all-leafy lt n h)
+  (local
+    [(define (expand-tree _)
+       (cond
+         [(node? lt) (list (make-node 'leaf lt) (make-node lt 'leaf) (make-node lt lt))]
+         [(symbol? lt) (list (make-node 'leaf 'leaf))]))]
+  (if (= n h)
+      (list lt)
+      (map (λ (x) (all-leafy x n (add1 h))) (expand-tree 1)))))
+
+(check-expect (all-leafy-trees 0) (list T0))
+(check-expect (all-leafy-trees 1) (list T1))
+(check-expect (all-leafy-trees 2) (list (make-node T0 T1) (make-node T1 T0) (make-node T1 T1)))
+(check-expect (length (all-leafy-trees 3)) 21)
+;(check-expect (length (all-leafy-trees 4)) 651)
+
+
+(list
+ (list
+  (list
+   (list (make-node 'leaf
+                    (make-node 'leaf (make-node 'leaf 'leaf))))
+   (list (make-node (make-node 'leaf
+                               (make-node 'leaf 'leaf))
+                    'leaf))
+   (list (make-node (make-node 'leaf
+                               (make-node 'leaf 'leaf))
+                    (make-node 'leaf
+                               (make-node 'leaf
+                                          'leaf)))))
+  (list
+   (list (make-node 'leaf (make-node (make-node 'leaf 'leaf) 'leaf)))
+   (list (make-node (make-node (make-node 'leaf 'leaf) 'leaf) 'leaf))
+   (list (make-node (make-node (make-node 'leaf 'leaf) 'leaf) (make-node (make-node 'leaf 'leaf) 'leaf))))
+  (list
+   (list (make-node 'leaf (make-node (make-node 'leaf 'leaf) (make-node 'leaf 'leaf))))
+   (list (make-node (make-node (make-node 'leaf 'leaf) (make-node 'leaf 'leaf)) 'leaf))
+   (list (make-node (make-node (make-node 'leaf 'leaf) (make-node 'leaf 'leaf)) (make-node (make-node 'leaf 'leaf) (make-node 'leaf 'leaf)))))))
+
+
