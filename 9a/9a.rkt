@@ -285,7 +285,7 @@
 0 -1 -1 19 1 #"\0"
 0 -1 1 #"\0"
 1.0 0 -1 -1 -1 -1 -1 -1 0 0 0 0 1 0 0.0 0.0 0.0 0.0 0.0 0.0 0 0 0 255
-255 255 -1 -1           0 15166 0 4 3 85
+255 255 -1 -1           0 15171 0 4 3 85
 (
  #";; The first three lines of this file were inserted by DrRacket. The"
  #"y record metadata"
@@ -6121,10 +6121,19 @@
 0 0 24 3 1 #")"
 0 0 24 29 1 #"\n"
 0 0 24 29 1 #"\n"
-0 0 17 3 33 #"; valid-order? : SExpr -> Boolean"
+0 0 17 3 32 #"; valid-order? : SExpr -> Boolea"
+0 0 17 3 1 #"n"
 0 0 24 29 1 #"\n"
-0 0 17 3 46 #"; Checks if the materials are in a valid order"
-0 0 24 29 1 #"\n"
+0 0 17 3 71
+(
+ #"; Checks if the materials, represented by an SExpr are in a valid or"
+ #"der"
+) 0 0 24 29 1 #"\n"
+0 0 17 3 89
+(
+ #"; Before this function is called, one must validate that the SExpr i"
+ #"s a list of materials"
+) 0 0 24 29 1 #"\n"
 0 0 24 3 1 #"("
 0 0 15 3 6 #"define"
 0 0 24 3 2 #" ("
@@ -6285,6 +6294,11 @@
 0 0 24 29 1 #"\n"
 0 0 17 3 53 #"; Checks if two S-expression material types are equal"
 0 0 24 29 1 #"\n"
+0 0 17 3 88
+(
+ #"; Before this function is called, one must validate that both SExprs"
+ #" represent materials"
+) 0 0 24 29 1 #"\n"
 0 0 24 3 1 #"("
 0 0 15 3 6 #"define"
 0 0 24 3 2 #" ("
