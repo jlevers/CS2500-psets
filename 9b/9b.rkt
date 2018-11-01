@@ -74,32 +74,43 @@
 (define (all-leafy-trees n)
   (local
     [; all-leafy-trees-iter : Natural [List-of LeafyTree] [List-of LeafyTree] -> [List-of LeafyTree]
-     (define (all-leafy-trees-iter h lolt)
-       (if (= n h)
-  (cond
-    [= n 0] (list 'leaf)
-    [= n 1] (list (make-node 'leaf 'leaf))
-    [else (all-leafy-trees-iter 1)
-  
+     (define (all-leafy-trees-iter h lolt prev)
+       (local [; grow-trees : [List-of LeafyTree] [List-of LeafyTree] -> [List-of LeafyTree]
+               ; Given the list of of leafy trees of height h-1 and the list of all
+               ; leafy trees of height h-2 and below, produces the list of all leafy trees of height h
+               (define (grow-trees lolt-inner previous)
+                 (cond
+                   [(empty? lolt-inner) '()]
+                   [(cons? lolt-inner) (append (grow-left (first lolt-inner)
+                                                          (append previous (rest lolt-inner)))
+                                               (grow-right (first lolt-inner)
+                                                           (append previous (rest lolt-inner)))
+                                               (list (make-node (first lolt-inner)
+                                                                (first lolt-inner)))
+                                               (grow-trees (rest lolt-inner) previous))]))
+               ; grow-left : LeafyTree [List-of Leafy-Tree] -> [List-of LeafyTree]
+               ; Produces a list of all leafy trees with the given leafy tree on the left
+               (define (grow-left lt lolt-inner)
+                 (append (list (make-node lt 'leaf))
+                         (map (λ (inner-lt) (make-node lt inner-lt)) lolt-inner)))
 
+               ; grow-right : LeafyTree [List-of Leafy-Tree] -> [List-of LeafyTree]
+               ; Produces a list of all leafy trees with the given leafy tree on the right
+               (define (grow-right lt lolt-inner)
+                 (append (list (make-node 'leaf lt))
+                         (map (λ (inner-lt) (make-node inner-lt lt)) lolt-inner)))]
+         (if (= n h)
+             lolt
+             (all-leafy-trees-iter (add1 h) (grow-trees lolt prev) (append lolt prev)))))]
+    (cond
+      [(= n 0) (list 'leaf)]
+      [(= n 1) (list (make-node 'leaf 'leaf))]
+      [else (all-leafy-trees-iter 1 (list (make-node 'leaf 'leaf)) '())])))
 
-; grow-trees : [List-of LeafyTree] [List-of LeafyTree] -> [List-of LeafyTree]
-; Given the list of of leafy trees of height h-1 and the list of all
-; leafy trees of height h-2 and below, produces the list of all leafy trees of height h
-(define (grow-trees lolt previous)
-  (cond
-    [(empty? lolt) '()]
-    [(cons? lolt) (append (grow-left (first lolt) (append previous (rest lolt)))
-                          (grow-right (first lolt) (append previous (rest lolt)))
-                          (list (make-node (first lolt) (first lolt)))
-                          (something (rest lolt) previous))]))
-
-; grow-left : LeafyTree [List-of Leafy-Tree] -> [List-of LeafyTree]
-; Produces a list of all leafy trees with the given leafy tree on the left
-(define (grow-left lt lolt)
-  (append (list (make-node lt 'leaf)) (map (λ (inner-lt) (make-node lt inner-lt)) lolt)))
-
-; grow-right : LeafyTree [List-of Leafy-Tree] -> [List-of LeafyTree]
-; Produces a list of all leafy trees with the given leafy tree on the right
-(define (grow-right lt lolt)
-  (append (list (make-node 'leaf lt)) (map (λ (inner-lt) (make-node inner-lt lt)) lolt)))
+(check-expect (all-leafy-trees 0) (list 'leaf))
+(check-expect (all-leafy-trees 1) (list T1))
+(check-expect (all-leafy-trees 2) (list (make-node (make-node 'leaf 'leaf) 'leaf)
+                                        (make-node 'leaf (make-node 'leaf 'leaf))
+                                        (make-node (make-node 'leaf 'leaf) (make-node 'leaf 'leaf))))
+(check-expect (length (all-leafy-trees 3)) 21)
+(check-expect (length (all-leafy-trees 4)) 651)
