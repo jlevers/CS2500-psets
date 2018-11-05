@@ -70,13 +70,42 @@
 (define (Function X Y) (make-fun-ty X Y))
 (define (List X) (make-list-ty X))
  
- 
+
+; type->string : Type -> String
+; Given a type, returns the string representing the type as it would appear in a signature
+(define (type->string type)
+  (cond [(equal? type 'number) "Number"]
+        [(equal? type 'boolean) "Boolean"]
+        [(equal? type 'string) "String"]
+        [(pair-ty? type) (string-append "[Pair-of "
+                                        (type->string (pair-ty-fst type))
+                                        " "
+                                        (type->string (pair-ty-snd type))
+                                        "]")]
+        [(fun-ty? type) (string-append  "["
+                                        (type->string (fun-ty-arg type))
+                                        " -> "
+                                        (type->string (fun-ty-ret type))
+                                        "]")]
+        [(list-ty? type) (string-append "[List-of "
+                                        (type->string (list-ty-itm type))
+                                        "]")]))
+(check-expect (type->string String)
+              "String")
+(check-expect (type->string (Pair-of Number Boolean))
+              "[Pair-of Number Boolean]")
+(check-expect (type->string (Function (Function Number Number) String))
+              "[[Number -> Number] -> String]")
+(check-expect (type->string (List (Function Number Number)))
+              "[List-of [Number -> Number]]")
+
+
 ; check : Type X -> X
 ; ensures the argument x behaves like the type,
 ; erroring otherwise (either immediately or when used)
 (define (check type x)
   (local ((define (err _) (error "the type didn't match: "
-                                 x " : " type)))
+                                 x " : " (type->string type))))
     (cond [(equal? type 'number) (if (number? x) x (err 1))]
           [(equal? type 'boolean) (if (boolean? x) x (err 1))]
           [(equal? type 'string) (if (string? x) x (err 1))]
@@ -109,57 +138,42 @@
 (check-expect ((check (Function Number Number) (lambda (x) x)) 1) 1)
 (check-error ((check (Function Number Number) (lambda (x) x)) "hi"))
 (check-error ((check (Function Number String) (lambda (x) x)) 1))
-;(check-expect (check (List Number) (list 1 2 3)) (list 1 2 3))
+(check-expect ((check (Function Number String) number->string) 5) "5")
+(check-error ((check (Function Number String) string->number) "5"))
+(check-expect (check (List Number) (list 1 2 3)) (list 1 2 3))
 (check-expect (check (List String) '("abc" "def" "ghi")) '("abc" "def" "ghi"))
 (check-expect ((first (check
                        (List (Function Number String))
                        (list
                         number->string
                         (λ (n) (string-append "b" (number->string n)))))) 4) (number->string 4))
-;(check-error (check (List Number) (list 2 3 "abc")))
-(check-error (check (List (Function Number String)) (list number->string string->number)))
+(check-error (check (List Number) (list 2 3 "abc")))
+(check-error (check (List (Function Number String)) (list ((λ (n) (number->string n)) 4)
+                                                          ((λ (n) (string->number n)) 4))))
+
+; positive : Number -> Boolean
+; returns whether number is positive
+(define positive (check (Function Number Boolean)
+                        (lambda (x)
+                          (cond
+                            [(<= x 0) "nonpositive"]
+                            [(> x 0) "positive"]))))
+
 
 ; sum-list : [List-of Number] -> Number
 ; Adds up the numbers in the list
-(define sum-list (check (List Number)
-                        (λ (lon)
-                          (cond
-                            [(empty? lon) 0]
-                            [(cons? lon) (+ (first lon) (sum-list (first lon)))]))))
- 
+(define sum-list (check (Function (List Number) Number)
+                        (λ (lon) (cond
+                                   [(empty? lon) 0]
+                                   [(cons? lon) (+ (first lon) (sum-list (first lon)))]))))
+(check-error (sum-list (list 5 6)))
+
 ; contains-frog? : [List-of String] -> Boolean
 ; Returns whether or not the list contains "frog"
-(define contains-frog? (check (List String)
-                              (λ (los)
-                                (cond
-                                  [(empty? los) "false"]
-                                  [(cons? los) (or (string=? (first los) "frog")
-                                                   (contains-frog? (first los)))]))))
+(define contains-frog? (check (Function (List String) Boolean)
+                              (λ (los) (cond
+                                         [(empty? los) "false"]
+                                         [(cons? los) (or (string=? (first los) "frog")
+                                                          (contains-frog? (first los)))]))))
+(check-error (contains-frog? (list "hi" "bye")))
 
-
-; type->string : Type -> String
-(define (type->string type)
-  (cond [(equal? type 'number) "Number"]
-        [(equal? type 'boolean) "Boolean"]
-        [(equal? type 'string) "String"]
-        [(pair-ty? type) (string-append "[Pair-of "
-                                        (type->string (pair-ty-fst type))
-                                        " "
-                                        (type->string (pair-ty-snd type))
-                                        "]")]
-        [(fun-ty? type) (string-append  "["
-                                        (type->string (fun-ty-arg type))
-                                        " -> "
-                                        (type->string (fun-ty-ret type))
-                                        "]")]
-        [(list-ty? type) (string-append "[List-of "
-                                        (type->string (list-ty-itm type))
-                                        "]")]))
-(check-expect (type->string String)
-              "String")
-(check-expect (type->string (Pair-of Number Boolean))
-              "[Pair-of Number Boolean]")
-(check-expect (type->string (Function (Function Number Number) String))
-              "[[Number -> Number] -> String]")
-(check-expect (type->string (List (Function Number Number)))
-              "[List [Number -> Number]]")
