@@ -151,14 +151,6 @@
 (check-error (check (List (Function Number String)) (list ((λ (n) (number->string n)) 4)
                                                           ((λ (n) (string->number n)) 4))))
 
-; positive : Number -> Boolean
-; returns whether number is positive
-(define positive (check (Function Number Boolean)
-                        (lambda (x)
-                          (cond
-                            [(<= x 0) "nonpositive"]
-                            [(> x 0) "positive"]))))
-
 
 ; sum-list : [List-of Number] -> Number
 ; Adds up the numbers in the list
