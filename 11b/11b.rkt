@@ -78,4 +78,110 @@
                                            [(symbol=? n 'b) '(c)]
                                            [(symbol=? n 'c) '(a)])))) #false)
 
+; graph=?/curried : Graph -> [Graph -> Boolean]
+; Curried graph=?
+(define graph=?/curried (λ (g1) (λ (g2) (graph=? g1 g2))))
 
+; Exercise #5
+; collapse : Symbol Symbol Symbol Graph -> Graph
+; Collapses nodes s1 and s2 into new in g
+(define (collapse s1 s2 new g)
+  (local [(define new-neigh (both-neighbors g s1 s2))
+          ; filter-old : [List-of Symbol] -> [List-of Symbol]
+          ; Scrapes out old symbols and inserts new symbol
+          (define (filter-old los)
+            (cons new
+                  (filter (λ (n) (not (or (symbol=? n s1) (symbol=? n s2))))
+                          los)))
+          (define new-nodes (filter-old (graph-nodes g)))
+          ; update-neighbors: [List-of Symbol] -> [List-of Symbol]
+          ; Updates a list of symbols, removing instances of s1 and s2 and replacing them with new
+          (define (update-neighbors los)
+            (if (or (member? s1 los) (member? s2 los))
+                (filter-old los)
+                los))
+          (define new-graph
+            (make-graph
+             new-nodes
+             (λ (s) (cond [(symbol=? s new) (update-neighbors new-neigh)]
+                          [(or (symbol=? s s1) (symbol=? s s2)) (error "Node does not exist")]
+                          [else (update-neighbors ((graph-neighbors g) s))]))))]
+    new-graph))
+    
+
+(check-satisfied (collapse 'a 'b 'q G-1)
+                 (graph=?/curried (make-graph '(q c)
+                                              (λ (n) (cond [(symbol=? n 'q) '(q c)]
+                                                           [(symbol=? n 'c) '(q)])))))
+(check-satisfied (collapse 'd 'f 'z G-2)
+                 (graph=?/curried (make-graph '(z e)
+                                              (λ (n) (cond [(symbol=? n 'z) '(z e)]
+                                                           [(symbol=? n 'e) '(e z)])))))
+
+; Exercise #6
+; reverse-edges : Graph -> Graph
+; Reverses the edges of the given graph
+(define (reverse-edges g)
+  (local [; get-connected : Symbol -> [List-of Symbol]
+          ; Gets all nodes connected to the given node
+          (define (get-connected s)
+            (filter (λ (n) (neighbor-of? g s n)) (graph-nodes g)))]
+    (make-graph (graph-nodes g)
+                (λ (s) (get-connected s)))))
+
+(check-satisfied (reverse-edges G-1)
+                 (graph=?/curried (make-graph '(a b c)
+                                              (λ (n) (cond [(symbol=? n 'a) '(c)]
+                                                           [(symbol=? n 'b) '(b a)]
+                                                           [(symbol=? n 'c) '(a)])))))
+(check-satisfied (reverse-edges G-2)
+                 (graph=?/curried (make-graph '(d e f)
+                                              (λ (n) (cond [(symbol=? n 'd) '(d e)]
+                                                           [(symbol=? n 'e) '(e f)]
+                                                           [(symbol=? n 'f) '(d e)])))))
+
+; Exercise #7
+; rename : Graph [List-of Symbol] -> Graph
+; Renames the symbols in the graph to the new symbol names
+(define (rename g los)
+  (local [; rename-recur : [List-of Symbol] [List-of Symbol] Graph -> Graph
+          ; Recursively renames each symbol with its new name
+          (define (rename-recur l1 l2 base)
+            (cond [(empty? l1) base]
+                  [(cons? l1) (collapse (first l1) (first l1) (first l2)
+                                        (rename-recur (rest l1) (rest l2) base))]))]
+    (rename-recur (graph-nodes g) los g)))
+
+(check-satisfied (rename G-1 '(d e f))
+                 (graph=?/curried (make-graph '(d e f)
+                                              (λ (n) (cond [(symbol=? n 'd) '(e f)]
+                                                           [(symbol=? n 'e) '(e)]
+                                                           [(symbol=? n 'f) '(d)])))))
+(check-satisfied (rename G-2 '(a b c))
+                 (graph=?/curried (make-graph '(a b c)
+                                              (λ (n) (cond [(symbol=? n 'a) '(a c)]
+                                                           [(symbol=? n 'b) '(b a c)]
+                                                           [(symbol=? n 'c) '(b)])))))
+
+; Exercise #8
+; swap : Graph -> Graph
+; Swaps a graph's nodes with its edges
+(define (swap g)
+  (local [(define (symbol->index lon s)
+            (foldr (λ (x base) (if (symbol=? x s) base (add1 base))) lon))
+          (define new-nodes (apply append (map (λ (s) (map (λ (n) (string->symbol (string-append ) ((graph-neighbors g) s))) (graph-nodes g)))
+
+(check-satisfied (swap G-1)
+                 (make-graph '(0->1 0->2 1->1 2->0)
+                             (λ (n) (cond [(symbol=? n '0->1) '(1->1)]
+                                          [(symbol=? n '0->2) '(2->0)]
+                                          [(symbol=? n '1->1) '(1->1)]
+                                          [(symbol=? n '2->0) '(0->1 0->2)]))))
+(check-satisfied (swap G-2)
+                 (make-graph '(0->0 0->2 1->1 1->0 1->2 2->1)
+                             (λ (n) (cond [(symbol=? n '0->0) '(0->0 0->2)]
+                                          [(symbol=? n '0->2) '(2->1)]
+                                          [(symbol=? n '1->1) '(1->1 1->0 1->2)]
+                                          [(symbol=? n '1->0) '(0->0 0->2)]
+                                          [(symbol=? n '1->2) '(2->1)]
+                                          [(symbol=? n '2->1) '(1->1 1->0 1->2)]))))
