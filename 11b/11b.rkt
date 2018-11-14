@@ -1,6 +1,8 @@
 ;; The first three lines of this file were inserted by DrRacket. They record metadata
 ;; about the language level of this file in a form that our tools can easily process.
 #reader(lib "htdp-intermediate-lambda-reader.ss" "lang")((modname 11b) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f () #f)))
+(require racket/string)
+
 ; A Graph is a (make-graph [List-of Symbol] [Symbol -> [List-of Symbol]])
 (define-struct graph [nodes neighbors])
 ; and represents the nodes and edges in a graph
@@ -163,25 +165,53 @@
                                                            [(symbol=? n 'b) '(b a c)]
                                                            [(symbol=? n 'c) '(b)])))))
 
+; node-name->numbers : Symbol -> (list Nat Nat)
+; Convert a symbol of the form 'n1->n2 to (list n1 n2)
+(define (node-name->numbers s)
+  (map string->number (string-split (symbol->string s) "->")))
+(check-expect (node-name->numbers '0->3) '(0 3))
+
 ; Exercise #8
 ; swap : Graph -> Graph
 ; Swaps a graph's nodes with its edges
 (define (swap g)
-  (local [(define (symbol->index lon s)
-            (foldr (λ (x base) (if (symbol=? x s) base (add1 base))) lon))
-          (define new-nodes (apply append (map (λ (s) (map (λ (n) (string->symbol (string-append ) ((graph-neighbors g) s))) (graph-nodes g)))
+  (local [(define og-nodes (graph-nodes g))
+          ; symbol->index : [List-of Symbol] Symbol Number -> Natural
+          ; Given a list of symbols and a symbol that exists in that list, returns its index (0 based)
+          (define (symbol->index los s index)
+            (cond [(empty? los) index]
+                  [(cons? los) (if (symbol=? (first los) s)
+                                   index
+                                   (symbol->index (rest los) s (add1 index)))]))
+          (define new-nodes (apply append (map (λ (s)
+                                                 (map (λ (n)
+                                                        (string->symbol
+                                                         (string-append
+                                                          (number->string
+                                                           (symbol->index og-nodes s 0))
+                                                          "->"
+                                                          (number->string
+                                                           (symbol->index og-nodes n 0)))))
+                                                      ((graph-neighbors g) s)))
+                                               (graph-nodes g))))
+          ; new-edges : Symbol -> [List-of Symbol]
+          ; Given a symbol in the new format, returns the symbol's new edges
+          (define (new-edges s)
+            (filter (λ (n) (= (first (node-name->numbers n)) (second (node-name->numbers s))))
+                    new-nodes))]
+    (make-graph new-nodes new-edges)))
 
 (check-satisfied (swap G-1)
-                 (make-graph '(0->1 0->2 1->1 2->0)
+                 (graph=?/curried (make-graph '(0->1 0->2 1->1 2->0)
                              (λ (n) (cond [(symbol=? n '0->1) '(1->1)]
                                           [(symbol=? n '0->2) '(2->0)]
                                           [(symbol=? n '1->1) '(1->1)]
-                                          [(symbol=? n '2->0) '(0->1 0->2)]))))
+                                          [(symbol=? n '2->0) '(0->1 0->2)])))))
 (check-satisfied (swap G-2)
-                 (make-graph '(0->0 0->2 1->1 1->0 1->2 2->1)
+                 (graph=?/curried (make-graph '(0->0 0->2 1->1 1->0 1->2 2->1)
                              (λ (n) (cond [(symbol=? n '0->0) '(0->0 0->2)]
                                           [(symbol=? n '0->2) '(2->1)]
                                           [(symbol=? n '1->1) '(1->1 1->0 1->2)]
                                           [(symbol=? n '1->0) '(0->0 0->2)]
                                           [(symbol=? n '1->2) '(2->1)]
-                                          [(symbol=? n '2->1) '(1->1 1->0 1->2)]))))
+                                          [(symbol=? n '2->1) '(1->1 1->0 1->2)])))))
