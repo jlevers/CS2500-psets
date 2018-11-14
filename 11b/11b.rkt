@@ -215,3 +215,26 @@
                                           [(symbol=? n '1->0) '(0->0 0->2)]
                                           [(symbol=? n '1->2) '(2->1)]
                                           [(symbol=? n '2->1) '(1->1 1->0 1->2)])))))
+
+; Exercise #9
+; close? : Graph Symbol Symbol Natural -> Boolean
+; Determines if s2 is within n steps of s1 in the given graph g
+(define (close? g s1 s2 n)
+  (local
+    ; close?/recur : Symbol Number -> Boolean
+    ; Determines if s2 is within dist steps of curr-node
+    [(define (close?/recur curr-node dist)
+       (local
+         [(define neighbors ((graph-neighbors g) curr-node))]
+       (cond
+         [(<= dist 0) #false]
+         [(> dist 0) (or (member? s2 neighbors)
+                          (ormap (λ (node) (close?/recur node (sub1 dist))) neighbors))])))]
+    (close?/recur s1 n)))
+
+
+(check-expect (close? G-1 'a 'b 1) #true)
+(check-expect (close? G-1 'c 'a 2) #true)
+(check-expect (close? G-1 'c 'b 1) #false)
+(check-expect (close? G-1 'c 'b 2) #true)
+(check-expect (close? G-1 'c 'a 0) #false)
