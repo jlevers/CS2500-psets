@@ -262,7 +262,7 @@
 (define (find-all-paths g s1 s2)
   (local
     [; find-all-paths-recur : Symbol [List-of Symbol] -> [List-of [List-of Symbol]]
-     ; Accumulates a list of the symbols already visited
+     ; Accumulates a list of the symbols visited so far, using an empty list if none have been visited
      (define (find-all-paths-recur curr-symbol visited)
        (local [(define next-list (append visited (list curr-symbol)))]
          (cond [(member? curr-symbol visited) '()]
