@@ -84,23 +84,23 @@
 ; Curried graph=?
 (define graph=?/curried (λ (g1) (λ (g2) (graph=? g1 g2))))
 
-; Exercise #5
+; Exercise #5a
 ; collapse : Symbol Symbol Symbol Graph -> Graph
 ; Collapses nodes s1 and s2 into new in g
 (define (collapse s1 s2 new g)
   (local [(define new-neigh (both-neighbors g s1 s2))
           ; filter-old : [List-of Symbol] -> [List-of Symbol]
-          ; Scrapes out old symbols and inserts new symbol
+          ; Removes instances of s1 and s2
           (define (filter-old los)
-            (cons new
                   (filter (λ (n) (not (or (symbol=? n s1) (symbol=? n s2))))
-                          los)))
-          (define new-nodes (filter-old (graph-nodes g)))
+                          los))
+          (define new-nodes (cons new (filter-old (graph-nodes g))))
           ; update-neighbors: [List-of Symbol] -> [List-of Symbol]
-          ; Updates a list of symbols, removing instances of s1 and s2 and replacing them with new
+          ; Updates a list of symbols, removing instances of s1 and s2 and adds new if s1 or s2
+          ; existed in the given list
           (define (update-neighbors los)
             (if (or (member? s1 los) (member? s2 los))
-                (filter-old los)
+                (cons new (filter-old los))
                 los))
           (define new-graph
             (make-graph
