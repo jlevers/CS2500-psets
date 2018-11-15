@@ -22,6 +22,22 @@
                         (λ (n) (cond [(symbol=? n 'a) '(b c)]
                                      [(symbol=? n 'b) '(b)]
                                      [(symbol=? n 'c) '(a)]))))
+(define G-4
+  (make-graph '(A B C D E F G)
+              (λ (n)
+                (cond [(symbol=? n 'A) '(B E)]
+                      [(symbol=? n 'B) '(E F)]
+                      [(symbol=? n 'C) '(D)]
+                      [(symbol=? n 'D) '()]
+                      [(symbol=? n 'E) '(C F A)]
+                      [(symbol=? n 'F) '(D G)]
+                      [(symbol=? n 'G) '()]))))
+(define G-5
+  (make-graph '(A B C)
+              (λ (n)
+                (cond [(symbol=? n 'A) '(B)]
+                      [(symbol=? n 'B) '(A C)]
+                      [(symbol=? n 'C) '(B)]))))
 
 ; Exercise #2
 ; neighbor-of? : Graph Symbol Symbol -> Boolean
@@ -84,7 +100,7 @@
 ; Curried graph=?
 (define graph=?/curried (λ (g1) (λ (g2) (graph=? g1 g2))))
 
-; Exercise #5a
+; Exercise #5
 ; collapse : Symbol Symbol Symbol Graph -> Graph
 ; Collapses nodes s1 and s2 into new in g
 (define (collapse s1 s2 new g)
@@ -92,8 +108,8 @@
           ; filter-old : [List-of Symbol] -> [List-of Symbol]
           ; Removes instances of s1 and s2
           (define (filter-old los)
-                  (filter (λ (n) (not (or (symbol=? n s1) (symbol=? n s2))))
-                          los))
+            (filter (λ (n) (not (or (symbol=? n s1) (symbol=? n s2))))
+                    los))
           (define new-nodes (cons new (filter-old (graph-nodes g))))
           ; update-neighbors: [List-of Symbol] -> [List-of Symbol]
           ; Updates a list of symbols, removing instances of s1 and s2 and adds new if s1 or s2
@@ -203,18 +219,18 @@
 
 (check-satisfied (swap G-1)
                  (graph=?/curried (make-graph '(0->1 0->2 1->1 2->0)
-                             (λ (n) (cond [(symbol=? n '0->1) '(1->1)]
-                                          [(symbol=? n '0->2) '(2->0)]
-                                          [(symbol=? n '1->1) '(1->1)]
-                                          [(symbol=? n '2->0) '(0->1 0->2)])))))
+                                              (λ (n) (cond [(symbol=? n '0->1) '(1->1)]
+                                                           [(symbol=? n '0->2) '(2->0)]
+                                                           [(symbol=? n '1->1) '(1->1)]
+                                                           [(symbol=? n '2->0) '(0->1 0->2)])))))
 (check-satisfied (swap G-2)
                  (graph=?/curried (make-graph '(0->0 0->2 1->1 1->0 1->2 2->1)
-                             (λ (n) (cond [(symbol=? n '0->0) '(0->0 0->2)]
-                                          [(symbol=? n '0->2) '(2->1)]
-                                          [(symbol=? n '1->1) '(1->1 1->0 1->2)]
-                                          [(symbol=? n '1->0) '(0->0 0->2)]
-                                          [(symbol=? n '1->2) '(2->1)]
-                                          [(symbol=? n '2->1) '(1->1 1->0 1->2)])))))
+                                              (λ (n) (cond [(symbol=? n '0->0) '(0->0 0->2)]
+                                                           [(symbol=? n '0->2) '(2->1)]
+                                                           [(symbol=? n '1->1) '(1->1 1->0 1->2)]
+                                                           [(symbol=? n '1->0) '(0->0 0->2)]
+                                                           [(symbol=? n '1->2) '(2->1)]
+                                                           [(symbol=? n '2->1) '(1->1 1->0 1->2)])))))
 
 ; Exercise #9
 ; close? : Graph Symbol Symbol Natural -> Boolean
@@ -226,10 +242,10 @@
     [(define (close?/recur curr-node dist)
        (local
          [(define neighbors ((graph-neighbors g) curr-node))]
-       (cond
-         [(<= dist 0) #false]
-         [(> dist 0) (or (member? s2 neighbors)
-                          (ormap (λ (node) (close?/recur node (sub1 dist))) neighbors))])))]
+         (cond
+           [(<= dist 0) #false]
+           [(> dist 0) (or (member? s2 neighbors)
+                           (ormap (λ (node) (close?/recur node (sub1 dist))) neighbors))])))]
     (close?/recur s1 n)))
 
 
@@ -238,3 +254,51 @@
 (check-expect (close? G-1 'c 'b 1) #false)
 (check-expect (close? G-1 'c 'b 2) #true)
 (check-expect (close? G-1 'c 'a 0) #false)
+
+
+; Exercise #10
+; find-all-paths : Graph Symbol Symbol -> [List-of [List-of Symbol]]
+; Finds all possible path between two given nodes in the given graph
+(define (find-all-paths g s1 s2)
+  (local
+    [; find-all-paths-recur : Symbol [List-of Symbol] -> [List-of [List-of Symbol]]
+     ; Accumulates a list of the symbols already visited
+     (define (find-all-paths-recur curr-symbol visited)
+       (local [(define next-list (append visited (list curr-symbol)))]
+         (cond [(member? curr-symbol visited) '()]
+               [(symbol=? curr-symbol s2) (list next-list)]
+               [else (apply append (map (λ (n) (find-all-paths-recur n next-list))
+                                        ((graph-neighbors g) curr-symbol)))])))]
+   (find-all-paths-recur s1 '())))
+
+(check-expect (find-all-paths G-4 'C 'C) '((C)))
+(check-expect (find-all-paths G-4 'C 'G) '())
+(check-expect (find-all-paths G-4 'A 'B) '((A B)))
+(check-expect (find-all-paths G-4 'E 'G) '((E F G)  (E A B F G)))
+(check-expect (find-all-paths G-4 'B 'G) '((B E F G)  (B F G)))
+(check-expect (find-all-paths G-4 'A 'G) '((A B E F G) (A B F G) (A E F G)))
+
+; Exercise 11
+; connected? : Graph -> Boolean
+; Determines is a graph is fully connected
+(define (connected? g)
+  (andmap (λ (s) (andmap (λ (n) (not (zero? (length (find-all-paths g s n)))))
+                         (filter (λ (x) (not (symbol=? s x)))
+                                 (graph-nodes g))))
+          (graph-nodes g)))
+; TODO
+(check-expect (connected? G-1) #false)
+(check-expect (connected? G-2) #true)
+
+; Exercise 12
+; undirected? : Graph -> Boolean
+; Determines if each edge has a matching edge going in the opposite direction
+(define (undirected? g)
+  (local
+    [(define reversed (reverse-edges g))]
+    (andmap (λ (s) (andmap (λ (n) (member? s ((graph-neighbors reversed) n))) ((graph-neighbors g) s))) (graph-nodes g))))
+; TODO
+(check-expect (undirected? G-1) #false)
+(check-expect (undirected? G-5) #true)
+
+; TODO Fix the accumulator purpose statement thing
