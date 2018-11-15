@@ -278,6 +278,11 @@
 (check-expect (find-all-paths G-4 'B 'G) '((B E F G)  (B F G)))
 (check-expect (find-all-paths G-4 'A 'G) '((A B E F G) (A B F G) (A E F G)))
 
+; true?: Boolean -> Boolean
+; Checks if a boolean is true
+(define true? (λ (b) (and b #true)))
+
+
 ; Exercise 11
 ; connected? : Graph -> Boolean
 ; Determines is a graph is fully connected
@@ -286,9 +291,9 @@
                          (filter (λ (x) (not (symbol=? s x)))
                                  (graph-nodes g))))
           (graph-nodes g)))
-; TODO
-(check-expect (connected? G-1) #false)
-(check-expect (connected? G-2) #true)
+
+(check-satisfied (connected? G-1) false?)
+(check-satisfied (connected? G-2) true?)
 
 ; Exercise 12
 ; undirected? : Graph -> Boolean
@@ -296,9 +301,11 @@
 (define (undirected? g)
   (local
     [(define reversed (reverse-edges g))]
-    (andmap (λ (s) (andmap (λ (n) (member? s ((graph-neighbors reversed) n))) ((graph-neighbors g) s))) (graph-nodes g))))
-; TODO
-(check-expect (undirected? G-1) #false)
-(check-expect (undirected? G-5) #true)
+    (andmap (λ (s) (andmap (λ (n) (member? n ((graph-neighbors reversed) s)))
+                           ((graph-neighbors g) s)))
+            (graph-nodes g))))
+
+(check-satisfied (undirected? G-1) false?)
+(check-satisfied (undirected? G-5) true?)
 
 ; TODO Fix the accumulator purpose statement thing
