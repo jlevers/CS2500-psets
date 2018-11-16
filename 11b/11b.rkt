@@ -14,6 +14,10 @@
                         (λ (n) (cond [(symbol=? n 'a) '(b c)]
                                      [(symbol=? n 'b) '(b)]
                                      [(symbol=? n 'c) '(a)]))))
+(define G-1.5 (make-graph '(x y z)
+                        (λ (n) (cond [(symbol=? n 'x) '(y z)]
+                                     [(symbol=? n 'y) '(y)]
+                                     [(symbol=? n 'z) '(x)]))))
 (define G-2 (make-graph '(d e f)
                         (λ (n) (cond [(symbol=? n 'd) '(d f)]
                                      [(symbol=? n 'e) '(e d f)]
@@ -269,7 +273,7 @@
                [(symbol=? curr-symbol s2) (list next-list)]
                [else (apply append (map (λ (n) (find-all-paths-recur n next-list))
                                         ((graph-neighbors g) curr-symbol)))])))]
-   (find-all-paths-recur s1 '())))
+    (find-all-paths-recur s1 '())))
 
 (check-expect (find-all-paths G-4 'C 'C) '((C)))
 (check-expect (find-all-paths G-4 'C 'G) '())
@@ -308,4 +312,12 @@
 (check-satisfied (undirected? G-1) false?)
 (check-satisfied (undirected? G-5) true?)
 
-; TODO Fix the accumulator purpose statement thing
+; Exercise 13
+; graph-size=? : Graph Graph -> Boolean
+; Determines if two given graphs have the same shape
+(define (graph-shape=? g1 g2)
+  (graph=? (swap g1) (swap g2)))
+
+(check-expect (graph-shape=? G-1 G-2) #false)
+(check-expect (graph-shape=? G-1 G-1) #true)
+(check-expect (graph-shape=? G-1 G-1.5) #true)
