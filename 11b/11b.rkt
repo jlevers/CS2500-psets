@@ -15,9 +15,9 @@
                                      [(symbol=? n 'b) '(b)]
                                      [(symbol=? n 'c) '(a)]))))
 (define G-1.5 (make-graph '(x y z)
-                        (λ (n) (cond [(symbol=? n 'x) '(y z)]
-                                     [(symbol=? n 'y) '(y)]
-                                     [(symbol=? n 'z) '(x)]))))
+                          (λ (n) (cond [(symbol=? n 'x) '(y z)]
+                                       [(symbol=? n 'y) '(y)]
+                                       [(symbol=? n 'z) '(x)]))))
 (define G-2 (make-graph '(d e f)
                         (λ (n) (cond [(symbol=? n 'd) '(d f)]
                                      [(symbol=? n 'e) '(e d f)]
