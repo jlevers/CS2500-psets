@@ -13,6 +13,9 @@
 ; - (list 'var Symbol)
 ; - (list 'lam Symbol Type Expression)
 ; - (list 'app Expression Expression)
+; - (list 'pair Expression Expression)
+; - (list 'fst Expression)
+; - (list 'snd Expression)
  
 (define AOPS '(+ -))
 ; An AopName is a member of AOPS, all of which have type: Number Number -> Number
@@ -26,6 +29,8 @@
 ; - 'Boolean
 (define-struct funty [arg ret])
 ; - (make-funty Type Type)
+(define-struct pairty [fst snd])
+; - (make-pairty Type Type)
  
 ; ensuretype : Environment Expression Type -> Type
 ; Check that expression e has type t, error if e's type does not match t
@@ -63,7 +68,41 @@
                  (define ty-e2 (typecheck-env env (fourth e))))
            (if (equal? ty-e1 ty-e2)
                ty-e1
-               (error "Branches of if expression " e "have different types")))]))
+               (error "Branches of if expression " e "have different types")))]
+        [(symbol=? (first e) 'lam)
+         (local [(define var-name (second e))
+                 (define arg-type (third e))
+                 (define t-2 (typecheck-env (cons (make-var:ty var-name arg-type) env) (fourth e)))]
+           (make-funty arg-type t-2))]
+        [(symbol=? (first e) 'var)
+         (local [(define var-name (second e))
+                 (define env-filtered (filter (λ (vt) (symbol=? (var:ty-var vt) var-name)) env))
+                 (define var (if (= (length env-filtered) 1)
+                                 (first env-filtered)
+                                 (error "Variable " var-name " has not been defined")))
+                 (define var-type (var:ty-ty var))]
+           var-type)]
+        [(symbol=? (first e) 'app)
+         (local [(define e1 (second e))
+                 (define e2 (third e))
+                 (define t1 (typecheck-env env e1))
+                 (define t1-arg-type (funty-arg t1))
+                 (define t2 (ensuretype env e2 t1-arg-type))]
+           (make-funty t1-arg-type t2))]
+        [(symbol=? (first e) 'pair)
+         (local [(define t1 (typecheck-env env (second e)))
+                 (define t2 (typecheck-env env (third e)))]
+           (make-pairty t1 t2))]
+        [(symbol=? (first e) 'fst)
+         (local [(define t1-t2 (typecheck-env env (second e)))
+                 (define fst-type (pairty-fst t1-t2))]
+           fst-type)]
+        [(symbol=? (first e) 'snd)
+         (local [(define t1-t2 (typecheck-env env (second e)))
+                 (define snd-type (pairty-snd t1-t2))]
+           snd-type)]))
+        
+                 
  
 ; typecheck : Expression -> Type
 ; return the type of the expression e or error if the expression is not well typed
@@ -81,3 +120,10 @@
 (check-expect (typecheck '(if (> 3 9) 1 4)) 'Number)
 (check-expect (typecheck '(and #false (> 2 2))) 'Boolean)
 (check-error (typecheck '(and #false (+ 2 2))))
+
+(check-expect (typecheck (list 'lam 'x 'Number 5)) (make-funty 'Number 'Number))
+(check-expect (typecheck (list 'lam 'x 'Number (list 'var 'x))) (make-funty 'Number 'Number))
+(check-error (typecheck (list 'lam 'x 'Number (list 'var 'y))))
+(check-expect (typecheck (list 'app (list 'lam 'x 'Number (list 'var 'x)) 5))
+              (make-funty 'Number 'Number))
+(check-error (typecheck (list 'app (list 'lam 'x 'Number (list 'var 'x)) #false)))
