@@ -34,21 +34,19 @@
 (define (customer-temp c)
   (... (payment-temp (customer-payment c)) ...))
 
-(define-struct register [fives tens twenties])
-; A Register is a (make-register Natural Natural Natural)
+(define-struct register [fives tens])
+; A Register is a (make-register Natural Natural)
 ; Interpretation:
 ; - the first field is the number of $5 bills in the register
 ; - the second field is the number of $10 bills in the register
-; - the third field is the number of $20 bills in the register
 ; Examples:
-(define R1 (make-register 0 0 0))
-(define R2 (make-register 4 1 2))
-(define R3 (make-register 3 5 7))
+(define R1 (make-register 0 0))
+(define R2 (make-register 4 1))
+(define R3 (make-register 3 5))
 ; Template:
 (define (register-template r)
   (... (register-fives r) ...
-       (register-tens r) ...
-       (register-twenties r) ...))
+       (register-tens r) ...))
 
 
 ; num-tickets-sold : Natural [List-of Customer] -> Natural
@@ -58,52 +56,70 @@
           ; Iterates over the list of customers and adds up how many can have change made for them
           (define (num-tickets-sold/acc r loc sold)
             (local [(define change (if (zero? (length loc)) #false (make-change r (first loc))))]
-              (if (boolean? change)
-                  sold
-                  (num-tickets-sold/acc change (rest loc) (add1 sold)))))]
-    (num-tickets-sold/acc (make-register n 0 0) loc0 0)))
+              (cond
+                [(false? change) sold]
+                [(and (>= (register-fives change) 0) (>= (register-tens change) 0))
+                 (num-tickets-sold/acc change (rest loc) (add1 sold))]
+                [else (num-tickets-sold/acc change (rest loc) sold)])))]
+    (num-tickets-sold/acc (make-register n 0) loc0 0)))
 
 (check-expect (num-tickets-sold 5 (list C5 C10 CCC C20)) 4)
 (check-expect (num-tickets-sold 1 (list C5 C10 CCC C20)) 4)
-(check-expect (num-tickets-sold 1 (list C10 C20 C5 CCC C5)) 1)
+(check-expect (num-tickets-sold 1 (list C10 C20 C5 CCC C5)) 4)
+(check-expect (num-tickets-sold 1 (list C5 C5 C20)) 3)
 (check-expect (num-tickets-sold 0 (list C10 C20)) 0)
 (check-expect (num-tickets-sold 2 (list C10 C5 C20 CCC C10 C20)) 5)
 
-; make-change : Register Customer -> [Union Register Boolean]
-; Attempts to make change for the given customer; returns the updated register if making change was
-; possible, otherwise returns false
+; make-change : Register Customer -> Register
+; Makes change for the given customer; returns the updated register after making change.
+; May return registers with negative values.
 (define (make-change r c)
-  (local [(define new-reg (cond [(symbol? (customer-payment c)) r]
-                                [(= (customer-payment c) 20) (make-register
-                                                              (sub1 (register-fives r))
-                                                              (sub1 (register-tens r))
-                                                              (add1 (register-twenties r)))]
-                                [(= (customer-payment c) 10) (make-register
-                                                              (sub1 (register-fives r))
-                                                              (add1 (register-tens r))
-                                                              (register-twenties r))]
-                                [(= (customer-payment c) 5) (make-register
-                                                             (add1 (register-fives r))
-                                                             (register-tens r)
-                                                             (register-twenties r))]))]
-    (if (and (>= (register-fives new-reg) 0) (>= (register-tens new-reg) 0)) new-reg #false)))
+  (cond
+    [(symbol? (customer-payment c)) r]
+    [(= (customer-payment c) 20) (if (>= (register-tens r) 1)
+                                     (make-register
+                                      (sub1 (register-fives r))
+                                      (sub1 (register-tens r)))
+                                     (make-register
+                                      (- (register-fives r) 3)
+                                      (register-tens r)))]
+    [(= (customer-payment c) 10) (make-register
+                                  (sub1 (register-fives r))
+                                  (add1 (register-tens r)))]
+    [(= (customer-payment c) 5) (make-register
+                                 (add1 (register-fives r))
+                                 (register-tens r))]))
         
-(check-expect (make-change R2 C20) (make-register 3 0 3))
-(check-expect (make-change R3 C10) (make-register 2 6 7))
-(check-expect (make-change R1 C5) (make-register 1 0 0))
-(check-expect (make-change R1 C10) #false)
+(check-expect (make-change R2 C20) (make-register 3 0))
+(check-expect (make-change R3 C10) (make-register 2 6))
+(check-expect (make-change R1 C5) (make-register 1 0))
+(check-expect (make-change R1 C10) (make-register -1 1))
 
 
 ; Exercise 2
 ; ----------
 
+(define PART-LENGTH 5)
+
 ; nth-smallest : Natural [List-of Real] -> Real
 ; Gets the nth smallest number in lor
-#;(define (nth-smallest n lor)
-    (cond [(= (length lor) 1) (first lor)]))
+(define (nth-smallest n lor)
+  (local [(define partitioned (partition-to-fives lor))
+          (define medians (map median partitioned))
+          (define pivot (median medians))
+          (define num-eq-pivot (length (filter (λ (x) (= pivot x)) lor)))
+          (define less-eq (append (filter (λ (r) (< r pivot)) lor)
+                                  (make-list (sub1 num-eq-pivot) pivot)))
+          (define greater (filter (λ (r) (> r pivot)) lor))]
+    (cond [(= (length lor) 1) (first lor)]
+          [(= (length less-eq) n) pivot]
+          [(> (length less-eq) n) (nth-smallest n less-eq)]
+          [(< (length less-eq) n) (nth-smallest (- (length greater) n) greater)])))
 
-;(check-expect (nth-smallest 3 '(-3 4 2 0 23 18)) 4)
-;(check-expect (nth-smallest 2 '(-23 20 12 -4 88 7)) 20)
+(check-expect (nth-smallest 3 '(-3 4 2 0 23 18)) 4)
+(check-expect (nth-smallest 2 '(-23 20 12 -4 88 7)) 7)
+(check-expect (nth-smallest 4 '(30 -4 16 23 30 2)) 30)
+(check-expect (nth-smallest 1 '(2 -1 0 4 11 5 33 10 101)) 0)
 
 ; partition-to-fives : [List-of X] -> [List-of [List-of X]]
 ; Breaks lox into lists of length 5 (plus a shorter list at the end if necessary)
@@ -111,7 +127,7 @@
   (local [(define (partition-to-fives/acc lox clox lolox)
             (cond [(empty? lox)
                    (append lolox (list clox))]
-                  [(= (length clox) 5)
+                  [(= (length clox) PART-LENGTH)
                    (partition-to-fives/acc (rest lox) (list (first lox)) (append lolox (list clox)))]
                   [else
                    (partition-to-fives/acc (rest lox) (append clox (list (first lox))) lolox)]))]
@@ -120,6 +136,21 @@
 (check-expect (partition-to-fives '(3 1 53 20 -4 64 -22 0 12 -12 8 -90))
               '((3 1 53 20 -4) (64 -22 0 12 -12) (8 -90)))
 (check-expect (partition-to-fives '(187 23)) '((187 23)))
+
+
+; median : [List-of Number] -> Number
+; Gets the median of a list of numbers
+(define (median lon)
+  (local [(define len (length lon))
+          (define index (if (odd? len) (floor (/ len 2)) (/ len 2)))]
+    (list-ref (sort lon <) index)))
+
+(check-expect (median '(-4 1 3 20 53)) 3)
+(check-expect (median '(-22 -12 0 12 64)) 0)
+(check-expect (median '(7 14 15 18)) 15)
+(check-expect (median '(23 187)) 187)
+
+
 
 ; Exercise 3
 ; ----------
