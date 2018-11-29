@@ -16,6 +16,9 @@
 ; - (list 'pair Expression Expression)
 ; - (list 'fst Expression)
 ; - (list 'snd Expression)
+; - (list 'inleft Type Expression)
+; - (list 'inright Type Expression)
+; - (list 'case Expression Expression 
  
 (define AOPS '(+ -))
 ; An AopName is a member of AOPS, all of which have type: Number Number -> Number
@@ -31,6 +34,8 @@
 ; - (make-funty Type Type)
 (define-struct pairty [fst snd])
 ; - (make-pairty Type Type)
+(define-struct sumty [left right])
+; - (make-sumty Type Type)
  
 ; ensuretype : Environment Expression Type -> Type
 ; Check that expression e has type t, error if e's type does not match t
@@ -39,6 +44,7 @@
     (if (equal? ty-e t)
         t
         (error "Expression " e " has type " ty-e " but was expected to have type " t))))
+    
  
 (define-struct var:ty [var ty])
 ; An Environment is a [List of (make-var:ty Symbol Type)]
@@ -87,8 +93,9 @@
                  (define e2 (third e))
                  (define t1 (typecheck-env env e1))
                  (define t1-arg-type (funty-arg t1))
+                 (define t1-ret-type (funty-ret t1))
                  (define t2 (ensuretype env e2 t1-arg-type))]
-           (make-funty t1-arg-type t2))]
+           t1-ret-type)]
         [(symbol=? (first e) 'pair)
          (local [(define t1 (typecheck-env env (second e)))
                  (define t2 (typecheck-env env (third e)))]
@@ -100,7 +107,30 @@
         [(symbol=? (first e) 'snd)
          (local [(define t1-t2 (typecheck-env env (second e)))
                  (define snd-type (pairty-snd t1-t2))]
-           snd-type)]))
+           snd-type)]
+        [(symbol=? (first e) 'inleft)
+         (local [(define t1+t2 (second e))
+                 (define valid-sumty (if (sumty? t1+t2)
+                                         t1+t2
+                                         (error "Expected " t1+t2 " to be a sumty")))
+                 (define t1 (sumty-left valid-sumty))
+                 (define t1-valid (ensuretype env (third e) t1))]
+           t1+t2)]
+        [(symbol=? (first e) 'inright)
+         (local [(define t1+t2 (second e))
+                 (define valid-sumty (if (sumty? t1+t2)
+                                         t1+t2
+                                         (error "Expected " t1+t2 " to be a sumty")))
+                 (define t2 (sumty-right valid-sumty))
+                 (define t2-valid (ensuretype env (third e) t2))]
+           t1+t2)]
+        [(symbol=? (first e) 'case)
+         (local [(define val (second e))
+                 (define val-ty (typecheck-env env val))
+                 (define (get-expr _)
+                   (cond [(typecheck-env env (list 'inleft val-ty (third e)) ...]
+                         [(typecheck-env env (list 'inleft (typecheck-env val-ty))) ... (third e) ...]
+        
         
                  
  
@@ -125,5 +155,13 @@
 (check-expect (typecheck (list 'lam 'x 'Number (list 'var 'x))) (make-funty 'Number 'Number))
 (check-error (typecheck (list 'lam 'x 'Number (list 'var 'y))))
 (check-expect (typecheck (list 'app (list 'lam 'x 'Number (list 'var 'x)) 5))
-              (make-funty 'Number 'Number))
+              'Number)
 (check-error (typecheck (list 'app (list 'lam 'x 'Number (list 'var 'x)) #false)))
+
+(check-expect (typecheck (list 'pair 5 5)) (make-pairty 'Number 'Number))
+(check-expect (typecheck (list 'pair (list 'lam 'x 'Number (list 'var 'x)) 5))
+              (make-pairty (make-funty 'Number 'Number) 'Number))
+(check-expect (typecheck (list 'fst (list 'pair (list 'lam 'x 'Number (list 'var 'x)) 5)))
+              (make-funty 'Number 'Number))
+(check-expect (typecheck (list 'snd (list 'pair (list 'lam 'x 'Number (list 'var 'x)) 5)))
+              'Number)
