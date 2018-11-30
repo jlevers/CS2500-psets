@@ -16,9 +16,10 @@
 ; - (list 'pair Expression Expression)
 ; - (list 'fst Expression)
 ; - (list 'snd Expression)
-; - (list 'inleft Type Expression)
-; - (list 'inright Type Expression)
-; - (list 'case Expression Expression Expression Expression Expression)
+; - (list 'inleft Type Expression Expression)
+; - (list 'inright Type Expression Expression)
+; - (list 'case Expression Expression Expression Symbol Symbol
+; - (list 'unit)
  
 (define AOPS '(+ -))
 ; An AopName is a member of AOPS, all of which have type: Number Number -> Number
@@ -30,6 +31,7 @@
 ; A Type is one of:
 ; - 'Number
 ; - 'Boolean
+; - 'Unit
 (define-struct funty [arg ret])
 ; - (make-funty Type Type)
 (define-struct pairty [fst snd])
@@ -125,14 +127,21 @@
                  (define t2-valid (ensuretype env (third e) t2))]
            t1+t2)]
         [(symbol=? (first e) 'case)
-         (local [(define ty-input (typecheck-env env (second e)))
-                 (define var1 
-                 (define ty-e1 (typecheck-env env (third e)))
-                 (define ty-e2 (typecheck-env env (fourth e)))]
-           (cond
-             [(not (sumty? ty-input)) (error "Expected " ty-input " to be a sumty")]
-             [(not (equal? ty-e1 ty-e2)) (error "Expected " ty-e1 " and " ty-e2 " to be same type")]
-             [else ty-e1]))]))
+         (local [
+                 (define ty-input (typecheck-env env (second e)))
+                 (define x (fifth e))
+                 (define y (sixth e))
+                 (define ty-input-valid (if (sumty? ty-input)
+                                            ty-input
+                                            (error "Expected " ty-input " to be a sumty")))
+                 (define ty-e1 (typecheck-env (cons (make-var:ty x (sumty-left ty-input)) env)
+                                              (third e)))
+                 (define ty-e2 (typecheck-env (cons (make-var:ty y (sumty-right ty-input)) env)
+                                              (fourth e)))]
+           (if (not (equal? ty-e1 ty-e2))
+               (error "Expected " ty-e1 " and " ty-e2 " to be same type")
+               ty-e1))]
+        [(symbol=? (first e) 'unit) 'Unit]))
         
 
                  
@@ -183,6 +192,31 @@
 
 (check-expect (typecheck (list 'case
                                (list 'inleft (make-sumty 'Number 'Boolean) 5)
-                               (list 'app (list 'lam 'x 'Number (list '+ (list 'var 'x) 2)) 5)
-                               (list 'app (list 'lam 'x 'Boolean (list 'if (list 'var 'x) 1 0)) 5))
+                               (list '+ (list 'var 'x) 2)
+                               (list 'if (list 'var 'y) 3 4)
+                               'x
+                               'y))
               'Number)
+(check-expect (typecheck (list 'case
+                               (list 'inright (make-sumty 'Number 'Boolean) #true)
+                               (list '+ (list 'var 'x) 2)
+                               (list 'if (list 'var 'y) 3 4)
+                               'x
+                               'y))
+              'Number)
+(check-error (typecheck (list 'case
+                              (list 'inleft (make-sumty 'Number 'Boolean) (list 'var 'fake))
+                              (list '+ (list 'var 'x) 2)
+                              (list 'if (list 'var 'y) 3 4)
+                              'x
+                              'y)))
+
+(check-expect (typecheck (list 'unit)) 'Unit)
+
+; Exercise 5
+
+(define tru '(inleft Unit Unit (unit)))
+(define fal '(inright Unit Unit (unit)))
+
+; if as a case statement:
+; (list 'case e0 e1 e2 _ _)
