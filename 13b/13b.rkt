@@ -18,7 +18,7 @@
 ; - (list 'snd Expression)
 ; - (list 'inleft Type Expression)
 ; - (list 'inright Type Expression)
-; - (list 'case Expression Expression 
+; - (list 'case Expression Expression Expression Expression Expression)
  
 (define AOPS '(+ -))
 ; An AopName is a member of AOPS, all of which have type: Number Number -> Number
@@ -125,13 +125,16 @@
                  (define t2-valid (ensuretype env (third e) t2))]
            t1+t2)]
         [(symbol=? (first e) 'case)
-         (local [(define val (second e))
-                 (define val-ty (typecheck-env env val))
-                 (define (get-expr _)
-                   (cond [(typecheck-env env (list 'inleft val-ty (third e)) ...]
-                         [(typecheck-env env (list 'inleft (typecheck-env val-ty))) ... (third e) ...]
+         (local [(define ty-input (typecheck-env env (second e)))
+                 (define var1 
+                 (define ty-e1 (typecheck-env env (third e)))
+                 (define ty-e2 (typecheck-env env (fourth e)))]
+           (cond
+             [(not (sumty? ty-input)) (error "Expected " ty-input " to be a sumty")]
+             [(not (equal? ty-e1 ty-e2)) (error "Expected " ty-e1 " and " ty-e2 " to be same type")]
+             [else ty-e1]))]))
         
-        
+
                  
  
 ; typecheck : Expression -> Type
@@ -164,4 +167,22 @@
 (check-expect (typecheck (list 'fst (list 'pair (list 'lam 'x 'Number (list 'var 'x)) 5)))
               (make-funty 'Number 'Number))
 (check-expect (typecheck (list 'snd (list 'pair (list 'lam 'x 'Number (list 'var 'x)) 5)))
+              'Number)
+
+(check-expect (typecheck (list 'inleft (make-sumty 'Number 'Boolean) 5))
+              (make-sumty 'Number 'Boolean))
+(check-error (typecheck (list 'inleft (make-sumty 'Number 'Boolean) #false)))
+(check-error (typecheck (list 'inleft 'Number 5)))
+(check-error (typecheck (list 'inleft (make-sumty 'Number 'Boolean) (list 'var 'hi))))
+
+(check-expect (typecheck (list 'inright (make-sumty 'Number 'Boolean) #false))
+              (make-sumty 'Number 'Boolean))
+(check-error (typecheck (list 'inright (make-sumty 'Number 'Boolean) 5)))
+(check-error (typecheck (list 'inright 'Number 5)))
+(check-error (typecheck (list 'inright (make-sumty 'Number 'Boolean) (list 'var 'hi))))
+
+(check-expect (typecheck (list 'case
+                               (list 'inleft (make-sumty 'Number 'Boolean) 5)
+                               (list 'app (list 'lam 'x 'Number (list '+ (list 'var 'x) 2)) 5)
+                               (list 'app (list 'lam 'x 'Boolean (list 'if (list 'var 'x) 1 0)) 5))
               'Number)
