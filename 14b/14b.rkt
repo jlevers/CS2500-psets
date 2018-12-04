@@ -25,6 +25,8 @@
 ; - (list 'if0 Program Program)
 ; - (list 'call)
 ; - (list 'lam Symbol Program)
+; - (list 'fst Value)
+; - (list 'snd Value)
 ; - (list 'unwrap)
  
 ; A Stack is a [List-of Value]
@@ -260,6 +262,73 @@
     (interp prog (append (list left right) (rest stk)))))
 
 (check-expect (interp-unwrap '() '((pair (num 3) (num 2)) (num 5))) '((num 3) (num 2) (num 5)))
-          
 
 
+; Exercise 4
+
+; An Expression is a:
+; - Number
+; - Boolean
+; - (list '+ Expression Expression)
+; - (list 'if Expression Expression Expression)
+; - (list 'var Symbol)
+; - (list 'lam Symbol Type Expression)
+; - (list 'app Expression Expression)
+; - (list 'pair Expression Expression)
+; - (list 'fst Expression)
+; - (list 'snd Expression)
+; - (list 'inleft Type Type Expression)
+; - (list 'inright Type Type Expression)
+; - (list 'case Expression Symbol Expression Symbol Expression)
+
+; compile : Expression -> Program
+; translates Expression into a Program where the Program evaluates to what
+; the Expression evaluates to
+(define (compile e)
+  (cond [(number? e) `((push (num ,e)))]
+        [(boolean? e) ...]
+        [(symbol=? (first e) '+) (append (compile (second e)) ;;; n1, ...
+                                         (compile (third e))  ;;; n2,n1 ...
+                                         '((add)))]
+        [(symbol=? (first e) 'if) ...]
+        [(symbol=? (first e) 'var) ...]
+        [(symbol=? (first e) 'lam) ...]
+        [(symbol=? (first e) 'app) ...]
+        [(symbol=? (first e) 'pair) (compile-pair (second e) (third e))]
+        [(symbol=? (first e) 'fst) ...]
+        [(symbol=? (first e) 'snd) ...]
+        [(symbol=? (first e) 'inleft) (compile-inleft (fourth e))]
+        [(symbol=? (first e) 'inright) (compile-inright (fourth e))]
+        [(symbol=? (first e) 'case)
+         (compile-case (second e) (third e) (fourth e) (fifth e) (sixth e))]))
+
+
+(check-expect (interp (compile 1) '()) '((num 1)))
+(check-expect (interp (compile '(+ 1 2)) '()) '((num 3)))
+
+; compile-pair : Expression Expression -> Program
+; translates the Expressions into in a pair
+(define (compile-pair e1 e2)
+  `((push (pair ,(compile e1) ,(compile e2)))))
+
+(check-expect (interp (compile-pair 3 #t rue)) '(pair 3 #true)) 
+
+; compile-inleft : Expression -> Program
+; translates Expression in an inleft into corresponding StackLang Program
+(define (compile-inleft e)
+  `((unwrap) (swap) (drop) ,(compile e)))
+
+(check-expect (compile-inleft '(inleft Number Boolean (pair 3 #true)))
+              '((unwrap) (swap) (drop) (num 3)))
+ 
+; compile-inright : Expression -> Program
+; translates Expression in an inright into corresponding StackLang Program
+(define (compile-inright e)
+  `((unwrap) (drop) ,(compile e)))
+ 
+; compile-case : Expression Symbol Expression Symbol Expression -> Program
+; translates Expressions, bindings, and branches of a case into corresponding StackLang Program
+(define (compile-case e x e1 y e2)
+  `((push (pair (thunk ((lam ,x ,(compile e1))))
+                (thunk ((lam ,y ,(compile e2))))))
+    ,(compile e) (call)))
